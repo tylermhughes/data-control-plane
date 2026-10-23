@@ -3,7 +3,12 @@ info:
   title: Data Control Plane API
   description: 'The control plane for AI training data: plan, route, check and measure
     data from every source. Everything the product does is available through this
-    API.'
+    API.
+
+
+    **Authentication:** send your API key as `Authorization: Bearer dcp_...` (in these
+    docs, use the **Authorize** button). **Errors** use the RFC 9457 problem format.
+    **Retries:** POST requests accept an `Idempotency-Key` header.'
   version: 0.1.0
 paths:
   /healthz:
@@ -38,8 +43,842 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Readiness'
+  /v1/me:
+    get:
+      tags:
+      - api keys
+      summary: Which API key am I using?
+      description: Works with any valid key. Handy for checking that a key works and
+        what it can do.
+      operationId: me_v1_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '403':
+          description: Forbidden
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      security:
+      - ApiKey: []
+  /v1/projects:
+    get:
+      tags:
+      - projects
+      summary: List projects
+      description: Admin keys see every project. Project keys see only their own.
+      operationId: list_projects_v1_projects_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_Project_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    post:
+      tags:
+      - projects
+      summary: Create a project
+      description: Needs an admin key with write access. Names must be unique.
+      operationId: create_project_v1_projects_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: Any unique string (e.g. a UUID). Retrying with the same key
+            returns the original response instead of creating a duplicate.
+          title: Idempotency-Key
+        description: Any unique string (e.g. a UUID). Retrying with the same key returns
+          the original response instead of creating a duplicate.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/projects/{project_id}:
+    get:
+      tags:
+      - projects
+      summary: Get a project
+      operationId: get_project_v1_projects__project_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Project Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    patch:
+      tags:
+      - projects
+      summary: Update a project
+      description: Needs an admin key with write access. Only the fields you send
+        are changed.
+      operationId: update_project_v1_projects__project_id__patch
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Project Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - projects
+      summary: Delete a project
+      description: Needs an admin key with write access. Revoke the project's API
+        keys first.
+      operationId: delete_project_v1_projects__project_id__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Project Id
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/api-keys:
+    get:
+      tags:
+      - api keys
+      summary: List API keys
+      description: Needs an admin key. Includes revoked keys (see `revoked_at`). Secrets
+        are never shown.
+      operationId: list_keys_v1_api_keys_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_ApiKey_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    post:
+      tags:
+      - api keys
+      summary: Create an API key
+      description: 'Needs an admin key with write access. The response includes `secret`,
+        the full key.
+
+        It is shown only this once.
+
+
+        A retry with the same Idempotency-Key does **not** show the secret again;
+        create a new key
+
+        if it was lost.'
+      operationId: create_key_v1_api_keys_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: Any unique string (e.g. a UUID). Retrying with the same key
+            returns the original response instead of creating a duplicate.
+          title: Idempotency-Key
+        description: Any unique string (e.g. a UUID). Retrying with the same key returns
+          the original response instead of creating a duplicate.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKeyCreated'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/api-keys/{key_id}:
+    get:
+      tags:
+      - api keys
+      summary: Get an API key
+      operationId: get_key_v1_api_keys__key_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: key_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Key Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    patch:
+      tags:
+      - api keys
+      summary: Rename an API key
+      operationId: rename_key_v1_api_keys__key_id__patch
+      security:
+      - ApiKey: []
+      parameters:
+      - name: key_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Key Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiKey'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - api keys
+      summary: Revoke an API key
+      description: 'The key stops working immediately. Revoking an already-revoked
+        key does nothing.
+
+        The last active admin key with write access cannot be revoked.'
+      operationId: revoke_key_v1_api_keys__key_id__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: key_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Key Id
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
 components:
   schemas:
+    ApiKey:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - key_01jbx4k9r2abcdefghjkmnpqrs
+        name:
+          type: string
+          title: Name
+        key_prefix:
+          type: string
+          title: Key Prefix
+          description: First characters of the key, to tell keys apart.
+        role:
+          type: string
+          enum:
+          - admin
+          - project
+          title: Role
+        access:
+          type: string
+          enum:
+          - read
+          - write
+          title: Access
+        project_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Project Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        last_used_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Used At
+          description: 'Approximate: updated at most once a minute.'
+        revoked_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Revoked At
+      type: object
+      required:
+      - id
+      - name
+      - key_prefix
+      - role
+      - access
+      - project_id
+      - created_at
+      - updated_at
+      - last_used_at
+      - revoked_at
+      title: ApiKey
+    ApiKeyCreate:
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+          examples:
+          - CI pipeline
+        role:
+          type: string
+          enum:
+          - admin
+          - project
+          title: Role
+          description: '`admin`: everything, including keys and projects. `project`:
+            only the project in `project_id`.'
+        access:
+          type: string
+          enum:
+          - read
+          - write
+          title: Access
+          description: '`read` can only look; `write` can change.'
+          default: write
+        project_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Project Id
+          description: Required for `project` keys only.
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - role
+      title: ApiKeyCreate
+    ApiKeyCreated:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - key_01jbx4k9r2abcdefghjkmnpqrs
+        name:
+          type: string
+          title: Name
+        key_prefix:
+          type: string
+          title: Key Prefix
+          description: First characters of the key, to tell keys apart.
+        role:
+          type: string
+          enum:
+          - admin
+          - project
+          title: Role
+        access:
+          type: string
+          enum:
+          - read
+          - write
+          title: Access
+        project_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Project Id
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        last_used_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Used At
+          description: 'Approximate: updated at most once a minute.'
+        revoked_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Revoked At
+        secret:
+          type: string
+          title: Secret
+          description: 'The full API key. Shown only once: store it now, it cannot
+            be retrieved later.'
+      type: object
+      required:
+      - id
+      - name
+      - key_prefix
+      - role
+      - access
+      - project_id
+      - created_at
+      - updated_at
+      - last_used_at
+      - revoked_at
+      - secret
+      title: ApiKeyCreated
+    ApiKeyUpdate:
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      title: ApiKeyUpdate
     Health:
       properties:
         status:
@@ -50,6 +889,143 @@ components:
       required:
       - status
       title: Health
+    Page_ApiKey_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ApiKey'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[ApiKey]
+    Page_Project_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/Project'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[Project]
+    Problem:
+      properties:
+        type:
+          type: string
+          title: Type
+          description: A URI identifying the kind of problem.
+          default: about:blank
+        title:
+          type: string
+          title: Title
+          description: Short summary of the kind of problem.
+        status:
+          type: integer
+          title: Status
+          description: HTTP status code.
+        detail:
+          type: string
+          title: Detail
+          description: What went wrong, in plain language.
+        errors:
+          anyOf:
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
+          - type: 'null'
+          title: Errors
+          description: 'For validation problems: one entry per invalid field.'
+      type: object
+      required:
+      - title
+      - status
+      - detail
+      title: Problem
+      description: An error, in the RFC 9457 "problem details" format.
+    Project:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - prj_01jbx4k9r2abcdefghjkmnpqrs
+        name:
+          type: string
+          title: Name
+        description:
+          type: string
+          title: Description
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - name
+      - description
+      - created_at
+      - updated_at
+      title: Project
+    ProjectCreate:
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+          description: Unique name.
+        description:
+          type: string
+          maxLength: 10000
+          title: Description
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      title: ProjectCreate
+    ProjectUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 200
+            minLength: 1
+          - type: 'null'
+          title: Name
+        description:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Description
+      additionalProperties: false
+      type: object
+      title: ProjectUpdate
+      description: Only the fields you send are changed.
     Readiness:
       properties:
         status:
@@ -69,3 +1045,8 @@ components:
       - status
       - database
       title: Readiness
+  securitySchemes:
+    ApiKey:
+      type: http
+      description: 'Your API key, e.g. `dcp_...`. Sent as `Authorization: Bearer dcp_...`.'
+      scheme: bearer

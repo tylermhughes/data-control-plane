@@ -12,7 +12,13 @@ cp .env.example .env        # then open .env and set POSTGRES_PASSWORD
 docker compose up --build
 ```
 
-Open **http://localhost:8000/docs** to see and try the API.
+The first time, create an admin API key (it is shown only once, so copy it):
+
+```
+docker compose exec api python -m app.cli create-admin-key
+```
+
+Open **http://localhost:8000/docs** to see and try the API. Click **Authorize** and paste the key.
 `http://localhost:8000/healthz` says whether the server is running, and `/readyz` says whether it can reach the database.
 
 To stop it, press `Ctrl+C`, or run `docker compose down`. Your data is kept for next time.

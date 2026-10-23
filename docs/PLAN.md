@@ -8,7 +8,7 @@ This file is kept up to date as each milestone moves forward (see the status tab
 | # | Milestone | Status |
 |---|---|---|
 | M0 | Skeleton + Mac setup | ✅ Done (tested by Tyler 2026-10-23) |
-| M1 | API keys + projects | ⚪ Not started |
+| M1 | API keys + projects | ✅ Done (tested by Tyler 2026-10-23) |
 | M2 | Capabilities, sources, versioned specs | ⚪ Not started |
 | M3 | Requests + allocations | ⚪ Not started |
 | M4a | Batches + manual accept/reject | ⚪ Not started |
@@ -98,4 +98,10 @@ Testing uses **`http://localhost:8000/docs` → "Try it out"**, with curl as a b
 - 2026-10-23 (M0): tests use a throwaway in-memory Postgres (`db-test`, compose profile `test`, localhost:55432 only). The real database port is never exposed.
 - 2026-10-23 (M0): one Docker image for both api and worker. The api applies migrations on start. Containers run as a non-root user.
 - 2026-10-23 (M0): the test HTTP client is `httpx2` (maintained by Pydantic, preferred by Starlette's TestClient), chosen by Tyler. No warning filter is needed.
+- 2026-10-23 (M1): the first admin key comes from `docker compose exec api python -m app.cli create-admin-key`, which prints it to the terminal, instead of being printed in the server log (rule 7: never log secrets). The log shows a hint until an admin key exists.
+- 2026-10-23 (M1): keys are `dcp_` + 43 random characters. Only a SHA-256 hash is stored, and the secret is shown once. Scopes are `admin` or `project` (one project), with `read` or `write` access. The last active admin write key can't be revoked.
+- 2026-10-23 (M1): project keys get 404 (not 403) for other projects, so they can't tell those projects exist. Only admin keys can create, rename or delete projects. Project names are unique. A project can't be deleted while it has active keys.
+- 2026-10-23 (M1): every create, update and delete writes an `events` row in the same transaction (`project.*`, `api_key.*`), ahead of webhooks in M4b.
+- 2026-10-23 (M1): an `Idempotency-Key` replay returns the original response with `Idempotent-Replayed: true`. Reusing a key with a different body gives 422. Replaying an API-key creation never re-shows the secret. Records are kept indefinitely for now; cleanup comes with the worker job queue (M4b).
+- 2026-10-23 (M1): successful `/healthz` and `/readyz` calls are left out of the access log. Failed ones still appear.
 - 2026-10-23 (M0): MinIO is deferred to M6, the first milestone that reads files. oasdiff is deferred until there is a first release to compare against.
