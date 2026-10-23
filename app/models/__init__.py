@@ -2,6 +2,7 @@
 
 from app.models.api_key import ApiKey
 from app.models.base import Base
+from app.models.batch import Batch
 from app.models.capability import Capability
 from app.models.data_source import DataSource
 from app.models.event import Event
@@ -14,6 +15,7 @@ __all__ = [
     "Allocation",
     "ApiKey",
     "Base",
+    "Batch",
     "Capability",
     "DataSource",
     "Event",

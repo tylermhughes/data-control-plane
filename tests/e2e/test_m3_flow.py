@@ -18,7 +18,10 @@ def test_m3_request_split_across_three_sources(client: TestClient, admin: Header
     s.allocate(req["id"], "Returns photos", quantity=3000, quoted_unit_rate="0.20")
 
     # 3. Total quoted cost: 6200 + 6600 + 600.
-    totals = client.get(f"/v1/requests/{req['id']}", headers=admin).json()["allocated"]
+    totals = [
+        {k: t[k] for k in ("unit", "currency", "quantity", "quoted_cost")}
+        for t in client.get(f"/v1/requests/{req['id']}", headers=admin).json()["allocated"]
+    ]
     assert totals == [
         {"unit": "images", "currency": "USD", "quantity": 11000, "quoted_cost": "13400.00"}
     ]

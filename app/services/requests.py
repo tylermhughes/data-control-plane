@@ -23,12 +23,16 @@ LABEL = "request"
 
 
 def to_schema(req: Request) -> schemas.Request:
-    totals: dict[tuple[str, str], list[Decimal]] = defaultdict(lambda: [Decimal(0), Decimal(0)])
+    # Per (unit, currency): quantity, quoted cost, delivered, accepted, spend.
+    totals: dict[tuple[str, str], list[Decimal]] = defaultdict(lambda: [Decimal(0)] * 5)
     for alloc in req.allocations:
+        total = totals[(alloc.unit, alloc.currency)]
         if alloc.status != "cancelled":
-            total = totals[(alloc.unit, alloc.currency)]
             total[0] += alloc.quantity
             total[1] += alloc.quoted_cost
+        total[2] += alloc.delivered_count
+        total[3] += alloc.accepted_count
+        total[4] += alloc.spend
     version = req.spec_version
     return schemas.Request(
         id=req.id,
@@ -48,9 +52,16 @@ def to_schema(req: Request) -> schemas.Request:
         status=req.status,
         allocated=[
             schemas.AllocatedTotal(
-                unit=unit, currency=currency, quantity=int(qty), quoted_cost=cost
+                unit=unit,
+                currency=currency,
+                quantity=int(qty),
+                quoted_cost=cost,
+                delivered_count=int(delivered),
+                accepted_count=int(accepted),
+                spend=spend,
             )
-            for (unit, currency), (qty, cost) in sorted(totals.items())
+            for (unit, currency), (qty, cost, delivered, accepted, spend) in sorted(totals.items())
+            if qty or delivered
         ],
         opened_at=req.opened_at,
         closed_at=req.closed_at,

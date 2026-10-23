@@ -11,7 +11,7 @@ This file is kept up to date as each milestone moves forward (see the status tab
 | M1 | API keys + projects | ✅ Done (tested by Tyler 2026-10-23) |
 | M2 | Capabilities, sources, versioned specs | ✅ Done (tested by Tyler 2026-10-23) |
 | M3 | Requests + allocations | ✅ Done (tested by Tyler 2026-10-23) |
-| M4a | Batches + manual accept/reject | ⚪ Not started |
+| M4a | Batches + manual accept/reject | ✅ Done (tested by Tyler 2026-10-23) |
 | M4b | Events + outbound webhooks | ⚪ Not started |
 | M5 | Datasets, evals, coverage, portfolio (north star) | ⚪ Not started |
 | M6 | Automated file checks | ⚪ Not started |
@@ -117,4 +117,8 @@ Testing uses **`http://localhost:8000/docs` → "Try it out"**, with curl as a b
 - 2026-10-23 (M3): closing a request cancels its planned allocations and is refused while any are active. Cancelling a request cancels its planned and active allocations; completed ones stay.
 - 2026-10-23 (M3): deleting something in use by requests or allocations is refused, naming up to 3 users. Requests with allocations can't be deleted; cancel them instead.
 - 2026-10-23 (M3): the split planner (recommendations) is in M8. Budgets are to be discussed at M5.
+- 2026-10-23 (M4a): a batch is one delivery against an **active** allocation. It records delivered, accepted and contributor counts, spend (in the allocation's currency), optional attribute counts (checked against the pinned spec version, and per attribute no more than the accepted count), file pointers, `received_at`, and the spec version copied from the allocation. Status is received → accepted or rejected; M6 adds checking, passed and failed.
+- 2026-10-23 (M4a): decisions made in DCP (`/accept`, `/reject`) are final. After that only notes can change, and only undecided batches can be deleted.
+- 2026-10-23 (M4a): **decisions can be made outside DCP** (vendor QA, Labelbox). A batch can be created already decided (`decision` with `decided_by`), and is marked `decision_source: external`. `external_ref` is unique per data source. Re-importing the same ref updates the batch (200) and records a `batch.reimported` event with the old and new values; identical data changes nothing. Imports can't overwrite batches decided in DCP. A re-import without a decision keeps the earlier one. From M6, DCP checks will flag issues on externally accepted batches but not overturn them.
+- 2026-10-23 (M4a): allocations show batch_count, delivered, accepted (accepted batches only), spend (every batch) and progress (accepted ÷ quantity). Request totals add the same delivery figures per unit and currency.
 - 2026-10-23 (M0): MinIO is deferred to M6, the first milestone that reads files. oasdiff is deferred until there is a first release to compare against.

@@ -19,7 +19,10 @@ def test_quoted_cost_and_request_totals(client: TestClient, admin: Headers) -> N
     cancelled = s.allocate(req["id"], "Surge", quantity=999, quoted_unit_rate="9")
     s.act("allocations", cancelled["id"], "cancel")
 
-    totals = client.get(f"/v1/requests/{req['id']}", headers=admin).json()["allocated"]
+    totals = [
+        {k: t[k] for k in ("unit", "currency", "quantity", "quoted_cost")}
+        for t in client.get(f"/v1/requests/{req['id']}", headers=admin).json()["allocated"]
+    ]
     assert totals == [
         # 6200 + 6610 + 549.90 = 13359.90; the cancelled allocation is excluded.
         {"unit": "images", "currency": "USD", "quantity": 11000, "quoted_cost": "13359.90"},

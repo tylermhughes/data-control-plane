@@ -68,12 +68,16 @@ class RequestUpdate(BaseModel):
 
 
 class AllocatedTotal(BaseModel):
-    """Allocated so far (planned, active and complete allocations) for one unit and currency."""
+    """Totals for one unit and currency. `quantity` and `quoted_cost` count planned, active and
+    complete allocations; delivery figures count every batch received."""
 
     unit: str = Field(examples=["images"])
     currency: str = Field(examples=["USD"])
     quantity: int = Field(examples=[12000])
     quoted_cost: MoneyOut
+    delivered_count: int = Field(examples=[12000])
+    accepted_count: int = Field(examples=[11290])
+    spend: MoneyOut = Field(examples=["18600.00"])
 
 
 class Request(BaseModel):
@@ -167,6 +171,13 @@ class Allocation(BaseModel):
     quoted_unit_rate: MoneyOut = Field(examples=["1.55"])
     currency: str = Field(examples=["USD"])
     quoted_cost: MoneyOut = Field(description="quantity × quoted_unit_rate.", examples=["6200.00"])
+    batch_count: int = Field(description="Deliveries received so far.", examples=[3])
+    delivered_count: int = Field(examples=[4200])
+    accepted_count: int = Field(description="From accepted batches.", examples=[3900])
+    spend: MoneyOut = Field(description="Sum of batch spend.", examples=["6045.00"])
+    progress: float = Field(
+        description="accepted_count ÷ quantity. Can exceed 1.", examples=[0.975]
+    )
     due_date: date | None
     notes: str
     status: AllocationStatus

@@ -118,3 +118,13 @@ class Setup:
 
     def act(self, kind: str, obj_id: str, action: str) -> Any:
         return self.client.post(f"/v1/{kind}/{obj_id}/{action}", headers=self.admin)
+
+    def active_allocation(self, source: str = "Surge", **extra: Any) -> Any:
+        """An active allocation on an open request (4000 units at 1.55)."""
+        req = self.open_request()
+        alloc = self.allocate(req["id"], source, **extra)
+        return self.act("allocations", alloc["id"], "activate").json()
+
+    def batch(self, allocation_id: str, **extra: Any) -> Any:
+        body = {"allocation_id": allocation_id, "delivered_count": 1000, "spend": "1550", **extra}
+        return post_ok(self.client, "/v1/batches", self.admin, body)

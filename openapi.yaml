@@ -3165,6 +3165,525 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Unprocessable Entity
+  /v1/batches:
+    get:
+      tags:
+      - batches
+      summary: List batches
+      operationId: list_batches_v1_batches_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only items in this project. Project keys always see only theirs.
+          title: Project Id
+        description: Only items in this project. Project keys always see only theirs.
+      - name: request_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only for this request.
+          title: Request Id
+        description: Only for this request.
+      - name: allocation_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only for this allocation.
+          title: Allocation Id
+        description: Only for this allocation.
+      - name: data_source_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only from this source.
+          title: Data Source Id
+        description: Only from this source.
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - received
+            - accepted
+            - rejected
+            type: string
+          - type: 'null'
+          description: Only in this status.
+          title: Status
+        description: Only in this status.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_Batch_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    post:
+      tags:
+      - batches
+      summary: Register a delivery (or import one decided elsewhere)
+      description: 'Records one delivery against an **active** allocation. It starts
+        as `received`; accept
+
+        or reject it with the actions below.
+
+
+        **Importing from other systems** (a vendor''s QA, Labelbox, ...): include
+        `decision` to
+
+        register a batch that is already accepted or rejected, and `external_ref`
+        (the source''s own
+
+        id for the delivery). Sending the same `external_ref` again updates that batch
+        (200) and
+
+        records what changed; identical data changes nothing.'
+      operationId: create_batch_v1_batches_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
+          - type: 'null'
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
+          title: Idempotency-Key
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Batch'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+        '200':
+          description: Existing batch re-imported
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Batch'
+  /v1/batches/{batch_id}:
+    get:
+      tags:
+      - batches
+      summary: Get a batch
+      operationId: get_batch_v1_batches__batch_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Batch Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Batch'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    patch:
+      tags:
+      - batches
+      summary: Update a batch
+      description: 'Undecided (`received`) batches: any field. Accepted or rejected:
+        notes only.'
+      operationId: update_batch_v1_batches__batch_id__patch
+      security:
+      - ApiKey: []
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Batch Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Batch'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - batches
+      summary: Delete an undecided batch
+      description: Only batches still `received`. Decided batches are part of the
+        record.
+      operationId: delete_batch_v1_batches__batch_id__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Batch Id
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/batches/{batch_id}/accept:
+    post:
+      tags:
+      - batches
+      summary: Accept a batch
+      description: 'Received → accepted, keeping `accepted_count` of the delivered
+        items. Optional
+
+        `attribute_counts` must use the spec version''s attributes and can''t exceed
+        the accepted
+
+        count for any attribute. Final: afterwards only notes can change.'
+      operationId: accept_batch_v1_batches__batch_id__accept_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Batch Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchAccept'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Batch'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/batches/{batch_id}/reject:
+    post:
+      tags:
+      - batches
+      summary: Reject a batch
+      description: 'Received → rejected, with a reason. Final: afterwards only notes
+        can change.'
+      operationId: reject_batch_v1_batches__batch_id__reject_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Batch Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchReject'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Batch'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
 components:
   schemas:
     AcceptanceRule:
@@ -3241,15 +3760,35 @@ components:
           title: Quoted Cost
           examples:
           - '25000.00'
+        delivered_count:
+          type: integer
+          title: Delivered Count
+          examples:
+          - 12000
+        accepted_count:
+          type: integer
+          title: Accepted Count
+          examples:
+          - 11290
+        spend:
+          type: string
+          title: Spend
+          examples:
+          - '18600.00'
       type: object
       required:
       - unit
       - currency
       - quantity
       - quoted_cost
+      - delivered_count
+      - accepted_count
+      - spend
       title: AllocatedTotal
-      description: Allocated so far (planned, active and complete allocations) for
-        one unit and currency.
+      description: 'Totals for one unit and currency. `quantity` and `quoted_cost`
+        count planned, active and
+
+        complete allocations; delivery figures count every batch received.'
     Allocation:
       properties:
         id:
@@ -3297,6 +3836,35 @@ components:
           description: quantity × quoted_unit_rate.
           examples:
           - '6200.00'
+        batch_count:
+          type: integer
+          title: Batch Count
+          description: Deliveries received so far.
+          examples:
+          - 3
+        delivered_count:
+          type: integer
+          title: Delivered Count
+          examples:
+          - 4200
+        accepted_count:
+          type: integer
+          title: Accepted Count
+          description: From accepted batches.
+          examples:
+          - 3900
+        spend:
+          type: string
+          title: Spend
+          description: Sum of batch spend.
+          examples:
+          - '6045.00'
+        progress:
+          type: number
+          title: Progress
+          description: accepted_count ÷ quantity. Can exceed 1.
+          examples:
+          - 0.975
         due_date:
           anyOf:
           - type: string
@@ -3352,6 +3920,11 @@ components:
       - quoted_unit_rate
       - currency
       - quoted_cost
+      - batch_count
+      - delivered_count
+      - accepted_count
+      - spend
+      - progress
       - due_date
       - notes
       - status
@@ -3700,6 +4273,52 @@ components:
       title: ApiKeyUpdate
       examples:
       - name: CI (main)
+    Artifact:
+      properties:
+        uri:
+          type: string
+          maxLength: 2000
+          minLength: 1
+          title: Uri
+          description: Where the file is, e.g. s3://bucket/path/part-1.jsonl
+          examples:
+          - s3://acme-cv-intake/surge/b-2042/part-1.jsonl
+        format:
+          type: string
+          enum:
+          - jsonl
+          - csv
+          - parquet
+          - images
+          - other
+          title: Format
+          examples:
+          - jsonl
+        sha256:
+          anyOf:
+          - type: string
+            pattern: ^[0-9a-f]{64}$
+          - type: 'null'
+          title: Sha256
+        size_bytes:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Size Bytes
+        record_count:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Record Count
+      additionalProperties: false
+      type: object
+      required:
+      - uri
+      - format
+      title: Artifact
+      description: A pointer to delivered data. DCP stores the pointer, not the data.
     Attribute:
       properties:
         name:
@@ -3735,6 +4354,399 @@ components:
       - values
       title: Attribute
       description: Something recorded about every item, with its allowed values.
+    Batch:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - bat_01m5n7gwqfa18zhpw1zwh7w2zy
+        project_id:
+          type: string
+          title: Project Id
+        request_id:
+          type: string
+          title: Request Id
+        allocation_id:
+          type: string
+          title: Allocation Id
+        data_source_id:
+          type: string
+          title: Data Source Id
+        spec_version_id:
+          type: string
+          title: Spec Version Id
+          description: The spec version this delivery was made under.
+        received_at:
+          type: string
+          format: date-time
+          title: Received At
+        status:
+          type: string
+          enum:
+          - received
+          - accepted
+          - rejected
+          title: Status
+        delivered_count:
+          type: integer
+          title: Delivered Count
+          examples:
+          - 12000
+        accepted_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Accepted Count
+          description: Null until decided.
+          examples:
+          - 11290
+        rejected_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Rejected Count
+          description: delivered − accepted.
+          examples:
+          - 710
+        contributor_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Contributor Count
+          examples:
+          - 46
+        spend:
+          type: string
+          title: Spend
+          examples:
+          - '18600.00'
+        currency:
+          type: string
+          title: Currency
+          examples:
+          - USD
+        attribute_counts:
+          additionalProperties:
+            additionalProperties:
+              type: integer
+            type: object
+          type: object
+          title: Attribute Counts
+        artifacts:
+          items:
+            $ref: '#/components/schemas/Artifact'
+          type: array
+          title: Artifacts
+        notes:
+          type: string
+          title: Notes
+        decision_source:
+          anyOf:
+          - type: string
+            enum:
+            - dcp
+            - external
+          - type: 'null'
+          title: Decision Source
+          description: '`dcp` if decided here, `external` if imported already decided.'
+        decided_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Decided By
+          examples:
+          - labelbox
+        decided_by_key_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Decided By Key Id
+        decided_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Decided At
+        rejection_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Rejection Reason
+        external_ref:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: External Ref
+          examples:
+          - surge-delivery-2042
+        external_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: External Url
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - project_id
+      - request_id
+      - allocation_id
+      - data_source_id
+      - spec_version_id
+      - received_at
+      - status
+      - delivered_count
+      - accepted_count
+      - rejected_count
+      - contributor_count
+      - spend
+      - currency
+      - attribute_counts
+      - artifacts
+      - notes
+      - decision_source
+      - decided_by
+      - decided_by_key_id
+      - decided_at
+      - rejection_reason
+      - external_ref
+      - external_url
+      - created_at
+      - updated_at
+      title: Batch
+    BatchAccept:
+      properties:
+        accepted_count:
+          type: integer
+          minimum: 0.0
+          title: Accepted Count
+          description: Items kept. Can be less than delivered.
+        attribute_counts:
+          anyOf:
+          - additionalProperties:
+              additionalProperties:
+                type: integer
+              type: object
+            type: object
+          - type: 'null'
+          title: Attribute Counts
+          description: 'Accepted items per attribute value, e.g. {"package_type":
+            {"shrink_wrapped": 3300}}. Optional.'
+        decided_by:
+          type: string
+          maxLength: 200
+          title: Decided By
+          description: Who decided.
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+      - accepted_count
+      title: BatchAccept
+      examples:
+      - accepted_count: 11290
+        attribute_counts:
+          package_type:
+            corrugated_box: 4100
+            shrink_wrapped: 3300
+        decided_by: Dana Okafor
+    BatchCreate:
+      properties:
+        allocation_id:
+          type: string
+          title: Allocation Id
+          description: Must be active.
+        received_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Received At
+          description: Defaults to now.
+        delivered_count:
+          type: integer
+          maximum: 1000000000.0
+          minimum: 0.0
+          title: Delivered Count
+        spend:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: string
+          title: Spend
+          description: What this delivery cost.
+          examples:
+          - '25000.00'
+        currency:
+          anyOf:
+          - type: string
+            pattern: ^[A-Z]{3}$
+            description: ISO 4217 code.
+            examples:
+            - USD
+          - type: 'null'
+          title: Currency
+          description: Defaults to the allocation's currency.
+        contributor_count:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Contributor Count
+          description: People who worked on it.
+        artifacts:
+          items:
+            $ref: '#/components/schemas/Artifact'
+          type: array
+          maxItems: 1000
+          title: Artifacts
+        notes:
+          type: string
+          maxLength: 10000
+          title: Notes
+          default: ''
+        external_ref:
+          anyOf:
+          - type: string
+            maxLength: 200
+            minLength: 1
+          - type: 'null'
+          title: External Ref
+          description: 'The source''s own id for this delivery. Unique per data source:
+            sending the same one again updates that batch instead of creating a new
+            one.'
+        external_url:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: External Url
+        decision:
+          anyOf:
+          - $ref: '#/components/schemas/ExternalDecision'
+          - type: 'null'
+          description: Include to import a batch already accepted or rejected elsewhere.
+      additionalProperties: false
+      type: object
+      required:
+      - allocation_id
+      - delivered_count
+      - spend
+      title: BatchCreate
+      examples:
+      - allocation_id: alc_01m5n7gwqfa18zhpw1zwh7w2zy
+        artifacts:
+        - format: jsonl
+          record_count: 12000
+          uri: s3://acme-cv-intake/surge/b-2042/part-1.jsonl
+        contributor_count: 46
+        delivered_count: 12000
+        external_ref: surge-delivery-2042
+        spend: '18600.00'
+      - allocation_id: alc_01m5n7gwqfa18zhpw1zwh7w2zy
+        artifacts:
+        - format: jsonl
+          record_count: 12000
+          uri: s3://acme-cv-intake/surge/b-2042/part-1.jsonl
+        contributor_count: 46
+        decision:
+          accepted_count: 11290
+          attribute_counts:
+            package_type:
+              corrugated_box: 4100
+              shrink_wrapped: 3300
+          decided_by: labelbox
+          status: accepted
+        delivered_count: 12000
+        external_ref: labelbox-export-118
+        spend: '18600.00'
+    BatchReject:
+      properties:
+        reason:
+          type: string
+          maxLength: 10000
+          minLength: 1
+          title: Reason
+        decided_by:
+          type: string
+          maxLength: 200
+          title: Decided By
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+      - reason
+      title: BatchReject
+      examples:
+      - decided_by: Dana Okafor
+        reason: Rater agreement 0.81 on small dents, below the 0.85 target.
+    BatchUpdate:
+      properties:
+        received_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Received At
+        delivered_count:
+          anyOf:
+          - type: integer
+            maximum: 1000000000.0
+            minimum: 0.0
+          - type: 'null'
+          title: Delivered Count
+        spend:
+          anyOf:
+          - anyOf:
+            - type: number
+              minimum: 0.0
+            - type: string
+            examples:
+            - '25000.00'
+          - type: 'null'
+          title: Spend
+        contributor_count:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Contributor Count
+        artifacts:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Artifact'
+            type: array
+            maxItems: 1000
+          - type: 'null'
+          title: Artifacts
+        notes:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Notes
+        external_url:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: External Url
+      additionalProperties: false
+      type: object
+      title: BatchUpdate
+      description: 'Undecided batches: any field. Accepted or rejected batches: notes
+        only.'
+      examples:
+      - delivered_count: 12040
+        notes: 40 late items.
     Capability:
       properties:
         id:
@@ -4176,6 +5188,60 @@ components:
         change.
       examples:
       - rights_expires_at: '2029-06-30'
+    ExternalDecision:
+      properties:
+        status:
+          type: string
+          enum:
+          - accepted
+          - rejected
+          title: Status
+        decided_by:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Decided By
+          description: The system or person that decided, e.g. `labelbox`, `surge`.
+          examples:
+          - surge
+        accepted_count:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Accepted Count
+          description: Required when accepted.
+        attribute_counts:
+          anyOf:
+          - additionalProperties:
+              additionalProperties:
+                type: integer
+              type: object
+            type: object
+          - type: 'null'
+          title: Attribute Counts
+        reason:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Reason
+          description: Required when rejected.
+        decided_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Decided At
+          description: When it was decided. Defaults to now.
+      additionalProperties: false
+      type: object
+      required:
+      - status
+      - decided_by
+      title: ExternalDecision
+      description: For batches already accepted or rejected outside DCP (a vendor's
+        QA, Labelbox, ...).
     Health:
       properties:
         status:
@@ -4222,6 +5288,24 @@ components:
       - data
       - next_cursor
       title: Page[ApiKey]
+    Page_Batch_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/Batch'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[Batch]
     Page_Capability_:
       properties:
         data:

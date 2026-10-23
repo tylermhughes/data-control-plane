@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -7,6 +8,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, InProject
 from app.models.data_source import DataSource
 from app.models.spec import SpecVersion
+
+if TYPE_CHECKING:
+    from app.models.batch import Batch
 
 PRIORITIES = ("P0", "P1", "P2", "P3")
 REQUEST_STATUSES = ("draft", "open", "closed", "cancelled")
@@ -88,7 +92,30 @@ class Allocation(InProject, Base):
     request: Mapped[Request] = relationship(back_populates="allocations")
     data_source: Mapped[DataSource] = relationship()
     spec_version: Mapped[SpecVersion] = relationship()
+    batches: Mapped[list["Batch"]] = relationship(back_populates="allocation", order_by="Batch.id")
 
     @property
     def quoted_cost(self) -> Decimal:
         return self.quoted_unit_rate * self.quantity
+
+    # Delivery totals, from this allocation's batches.
+    @property
+    def batch_count(self) -> int:
+        return len(self.batches)
+
+    @property
+    def delivered_count(self) -> int:
+        return sum(b.delivered_count for b in self.batches)
+
+    @property
+    def accepted_count(self) -> int:
+        return sum(b.accepted_count or 0 for b in self.batches if b.status == "accepted")
+
+    @property
+    def spend(self) -> Decimal:
+        return sum((b.spend for b in self.batches), Decimal(0))
+
+    @property
+    def progress(self) -> float:
+        """Accepted units as a share of the allocated quantity (can exceed 1)."""
+        return round(self.accepted_count / self.quantity, 4)

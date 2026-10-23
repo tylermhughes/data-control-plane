@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     allocations,
     api_keys,
+    batches,
     capabilities,
     data_sources,
     me,
@@ -22,3 +23,4 @@ router.include_router(data_sources.router)
 router.include_router(specs.router)
 router.include_router(requests.router)
 router.include_router(allocations.router)
+router.include_router(batches.router)
