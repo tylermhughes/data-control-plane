@@ -39,3 +39,82 @@ SPEC_CONTENT: dict[str, Any] = {
     ],
     "change_note": "First version.",
 }
+
+
+class Setup:
+    """A project with a capability, three sources and an approved spec (v1)."""
+
+    def __init__(self, client: TestClient, admin: Headers, name: str = "Vision") -> None:
+        self.client, self.admin = client, admin
+        self.project_id = new_project(client, admin, name)
+        self.capability_id = post_ok(
+            client,
+            "/v1/capabilities",
+            admin,
+            {
+                "project_id": self.project_id,
+                "name": "Damage",
+                "eval_metric": "recall@0.5",
+                "value_per_point": "25000",
+                "currency": "USD",
+            },
+        )["id"]
+        self.sources = {
+            name: post_ok(
+                client,
+                "/v1/data-sources",
+                admin,
+                {
+                    "project_id": self.project_id,
+                    "name": name,
+                    "kind": kind,
+                    "default_unit": unit,
+                    "license_type": "other",
+                },
+            )["id"]
+            for name, kind, unit in (
+                ("Surge", "human_vendor", "images"),
+                ("Mercor", "human_vendor", "images"),
+                ("Returns photos", "enterprise_workflow", "images"),
+                ("Picking sim", "rl_environment", "tasks"),
+            )
+        }
+        spec = post_ok(
+            client,
+            "/v1/specs",
+            admin,
+            {"project_id": self.project_id, "name": "Damage spec", "first_version": SPEC_CONTENT},
+        )
+        self.spec_id = spec["id"]
+        self.v1 = post_ok(
+            client, f"/v1/specs/{self.spec_id}/versions/1/approve", admin, {"approved_by": "PM"}
+        )["id"]
+
+    def request(self, **extra: Any) -> Any:
+        body = {
+            "capability_id": self.capability_id,
+            "title": "Shrink-wrap",
+            "quantity": 10000,
+            "unit": "images",
+            "spec_version_id": self.v1,
+            **extra,
+        }
+        return post_ok(self.client, "/v1/requests", self.admin, body)
+
+    def open_request(self, **extra: Any) -> Any:
+        req = self.request(**extra)
+        return post_ok(self.client, f"/v1/requests/{req['id']}/open", self.admin, {})
+
+    def allocate(self, request_id: str, source: str, **extra: Any) -> Any:
+        body = {
+            "request_id": request_id,
+            "data_source_id": self.sources[source],
+            "quantity": 4000,
+            "quoted_unit_rate": "1.55",
+            "currency": "USD",
+            **extra,
+        }
+        return post_ok(self.client, "/v1/allocations", self.admin, body)
+
+    def act(self, kind: str, obj_id: str, action: str) -> Any:
+        return self.client.post(f"/v1/{kind}/{obj_id}/{action}", headers=self.admin)

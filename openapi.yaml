@@ -2096,6 +2096,1075 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Unprocessable Entity
+  /v1/requests:
+    get:
+      tags:
+      - requests
+      summary: List requests
+      operationId: list_requests_v1_requests_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only items in this project. Project keys always see only theirs.
+          title: Project Id
+        description: Only items in this project. Project keys always see only theirs.
+      - name: capability_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only for this capability.
+          title: Capability Id
+        description: Only for this capability.
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - draft
+            - open
+            - closed
+            - cancelled
+            type: string
+          - type: 'null'
+          description: Only in this status.
+          title: Status
+        description: Only in this status.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_Request_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    post:
+      tags:
+      - requests
+      summary: Create a request
+      description: 'A request asks for data to improve one capability. It starts as
+        a **draft**; the
+
+        project is taken from the capability. Attach an approved spec version, then
+        open it.'
+      operationId: create_request_v1_requests_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
+          - type: 'null'
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
+          title: Idempotency-Key
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/requests/{request_id}:
+    get:
+      tags:
+      - requests
+      summary: Get a request
+      operationId: get_request_v1_requests__request_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Request Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    patch:
+      tags:
+      - requests
+      summary: Update a request
+      description: 'Draft and open requests only. Changing `spec_version_id` affects
+        new allocations only;
+
+        existing allocations keep the version they were quoted against.'
+      operationId: update_request_v1_requests__request_id__patch
+      security:
+      - ApiKey: []
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Request Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - requests
+      summary: Delete a request
+      description: Only requests with no allocations. Otherwise cancel it.
+      operationId: delete_request_v1_requests__request_id__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Request Id
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/requests/{request_id}/open:
+    post:
+      tags:
+      - requests
+      summary: Open a request
+      description: 'Draft → open. Needs an approved spec version. Allocations can
+        only be activated on
+
+        open requests.'
+      operationId: open_request_v1_requests__request_id__open_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Request Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/requests/{request_id}/close:
+    post:
+      tags:
+      - requests
+      summary: Close a request
+      description: 'Open → closed. Refused while any allocation is active. Allocations
+        that never started
+
+        (planned) are cancelled.'
+      operationId: close_request_v1_requests__request_id__close_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Request Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/requests/{request_id}/cancel:
+    post:
+      tags:
+      - requests
+      summary: Cancel a request
+      description: 'Draft or open → cancelled. Its planned and active allocations
+        are cancelled too;
+
+        completed ones are kept as they are.'
+      operationId: cancel_request_v1_requests__request_id__cancel_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Request Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/allocations:
+    get:
+      tags:
+      - allocations
+      summary: List allocations
+      operationId: list_allocations_v1_allocations_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only items in this project. Project keys always see only theirs.
+          title: Project Id
+        description: Only items in this project. Project keys always see only theirs.
+      - name: request_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only for this request.
+          title: Request Id
+        description: Only for this request.
+      - name: data_source_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only for this source.
+          title: Data Source Id
+        description: Only for this source.
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - planned
+            - active
+            - complete
+            - cancelled
+            type: string
+          - type: 'null'
+          description: Only in this status.
+          title: Status
+        description: Only in this status.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_Allocation_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    post:
+      tags:
+      - allocations
+      summary: Create an allocation
+      description: 'Gives part of a request to one data source at a quoted rate. Starts
+        as **planned**.
+
+
+        The request needs an approved spec version; the allocation pins that exact
+        version.
+
+        Allocations may add up to more than the request''s quantity (e.g. to cover
+        rejects).'
+      operationId: create_allocation_v1_allocations_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
+          - type: 'null'
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
+          title: Idempotency-Key
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AllocationCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Allocation'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/allocations/{allocation_id}:
+    get:
+      tags:
+      - allocations
+      summary: Get an allocation
+      operationId: get_allocation_v1_allocations__allocation_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: allocation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Allocation Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Allocation'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    patch:
+      tags:
+      - allocations
+      summary: Update an allocation
+      description: 'Planned: any field. Active: only `quantity`, `due_date` and `notes`
+        (the quoted rate,
+
+        currency and unit are the commitment). Complete or cancelled: nothing.'
+      operationId: update_allocation_v1_allocations__allocation_id__patch
+      security:
+      - ApiKey: []
+      parameters:
+      - name: allocation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Allocation Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AllocationUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Allocation'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - allocations
+      summary: Delete a planned allocation
+      description: Planned allocations only. Cancel active ones instead.
+      operationId: delete_allocation_v1_allocations__allocation_id__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: allocation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Allocation Id
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/allocations/{allocation_id}/activate:
+    post:
+      tags:
+      - allocations
+      summary: Start the work
+      description: Planned → active. The request must be open.
+      operationId: activate_allocation_v1_allocations__allocation_id__activate_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: allocation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Allocation Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Allocation'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/allocations/{allocation_id}/complete:
+    post:
+      tags:
+      - allocations
+      summary: Mark the work complete
+      description: Active → complete.
+      operationId: complete_allocation_v1_allocations__allocation_id__complete_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: allocation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Allocation Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Allocation'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/allocations/{allocation_id}/cancel:
+    post:
+      tags:
+      - allocations
+      summary: Cancel an allocation
+      description: Planned or active → cancelled.
+      operationId: cancel_allocation_v1_allocations__allocation_id__cancel_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: allocation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Allocation Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Allocation'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
 components:
   schemas:
     AcceptanceRule:
@@ -2150,6 +3219,275 @@ components:
       title: AcceptanceRule
       description: A pass/fail rule for batches, e.g. agreement >= 0.85. Checked automatically
         from M6.
+    AllocatedTotal:
+      properties:
+        unit:
+          type: string
+          title: Unit
+          examples:
+          - images
+        currency:
+          type: string
+          title: Currency
+          examples:
+          - USD
+        quantity:
+          type: integer
+          title: Quantity
+          examples:
+          - 12000
+        quoted_cost:
+          type: string
+          title: Quoted Cost
+          examples:
+          - '25000.00'
+      type: object
+      required:
+      - unit
+      - currency
+      - quantity
+      - quoted_cost
+      title: AllocatedTotal
+      description: Allocated so far (planned, active and complete allocations) for
+        one unit and currency.
+    Allocation:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - alc_01m5n7gwqfa18zhpw1zwh7w2zy
+        project_id:
+          type: string
+          title: Project Id
+        request_id:
+          type: string
+          title: Request Id
+        data_source_id:
+          type: string
+          title: Data Source Id
+        spec_version_id:
+          type: string
+          title: Spec Version Id
+          description: The spec version this allocation was quoted against. Never
+            changes.
+        quantity:
+          type: integer
+          title: Quantity
+          examples:
+          - 4000
+        unit:
+          type: string
+          title: Unit
+          examples:
+          - images
+        quoted_unit_rate:
+          type: string
+          title: Quoted Unit Rate
+          examples:
+          - '1.55'
+        currency:
+          type: string
+          title: Currency
+          examples:
+          - USD
+        quoted_cost:
+          type: string
+          title: Quoted Cost
+          description: quantity × quoted_unit_rate.
+          examples:
+          - '6200.00'
+        due_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Due Date
+        notes:
+          type: string
+          title: Notes
+        status:
+          type: string
+          enum:
+          - planned
+          - active
+          - complete
+          - cancelled
+          title: Status
+        activated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Activated At
+        completed_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Completed At
+        cancelled_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Cancelled At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - project_id
+      - request_id
+      - data_source_id
+      - spec_version_id
+      - quantity
+      - unit
+      - quoted_unit_rate
+      - currency
+      - quoted_cost
+      - due_date
+      - notes
+      - status
+      - activated_at
+      - completed_at
+      - cancelled_at
+      - created_at
+      - updated_at
+      title: Allocation
+    AllocationCreate:
+      properties:
+        request_id:
+          type: string
+          title: Request Id
+        data_source_id:
+          type: string
+          title: Data Source Id
+          description: Must be in the same project as the request.
+        quantity:
+          type: integer
+          maximum: 1000000000.0
+          exclusiveMinimum: 0.0
+          title: Quantity
+          examples:
+          - 10000
+        unit:
+          anyOf:
+          - type: string
+            maxLength: 32
+            minLength: 1
+            pattern: ^[a-z][a-z0-9_ ]*$
+          - type: 'null'
+          title: Unit
+          description: Defaults to the data source's `default_unit`.
+        quoted_unit_rate:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: string
+          title: Quoted Unit Rate
+          description: Quoted price per unit.
+          examples:
+          - '25000.00'
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+          title: Currency
+          description: ISO 4217 code.
+          examples:
+          - USD
+        due_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Due Date
+        notes:
+          type: string
+          maxLength: 10000
+          title: Notes
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+      - request_id
+      - data_source_id
+      - quantity
+      - quoted_unit_rate
+      - currency
+      title: AllocationCreate
+      examples:
+      - currency: USD
+        data_source_id: src_01m5n7gwqfa18zhpw1zwh7w2zy
+        due_date: '2026-12-01'
+        notes: Quote Q-2210, includes 5% gold images.
+        quantity: 4000
+        quoted_unit_rate: '1.55'
+        request_id: req_01m5n7gwqfa18zhpw1zwh7w2zy
+    AllocationUpdate:
+      properties:
+        quantity:
+          anyOf:
+          - type: integer
+            maximum: 1000000000.0
+            exclusiveMinimum: 0.0
+          - type: 'null'
+          title: Quantity
+        unit:
+          anyOf:
+          - type: string
+            maxLength: 32
+            minLength: 1
+            pattern: ^[a-z][a-z0-9_ ]*$
+          - type: 'null'
+          title: Unit
+        quoted_unit_rate:
+          anyOf:
+          - anyOf:
+            - type: number
+              minimum: 0.0
+            - type: string
+            examples:
+            - '25000.00'
+          - type: 'null'
+          title: Quoted Unit Rate
+        currency:
+          anyOf:
+          - type: string
+            pattern: ^[A-Z]{3}$
+            description: ISO 4217 code.
+            examples:
+            - USD
+          - type: 'null'
+          title: Currency
+        due_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Due Date
+        notes:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Notes
+      additionalProperties: false
+      type: object
+      title: AllocationUpdate
+      description: 'Planned allocations: any field. Active: only quantity, due date
+        and notes.
+
+        Complete or cancelled: nothing.'
+      examples:
+      - due_date: '2026-12-08'
+        quantity: 5000
     ApiKey:
       properties:
         id:
@@ -2848,6 +4186,24 @@ components:
       required:
       - status
       title: Health
+    Page_Allocation_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/Allocation'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[Allocation]
     Page_ApiKey_:
       properties:
         data:
@@ -2920,6 +4276,24 @@ components:
       - data
       - next_cursor
       title: Page[Project]
+    Page_Request_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/Request'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[Request]
     Page_SpecVersion_:
       properties:
         data:
@@ -3091,6 +4465,297 @@ components:
       - status
       - database
       title: Readiness
+    Request:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - req_01m5n7gwqfa18zhpw1zwh7w2zy
+        project_id:
+          type: string
+          title: Project Id
+        capability_id:
+          type: string
+          title: Capability Id
+        title:
+          type: string
+          title: Title
+          examples:
+          - Shrink-wrapped and glossy packaging
+        requested_by:
+          type: string
+          title: Requested By
+          examples:
+          - Priya Nair
+        priority:
+          type: string
+          enum:
+          - P0
+          - P1
+          - P2
+          - P3
+          title: Priority
+          examples:
+          - P1
+        rationale:
+          type: string
+          title: Rationale
+        target_metric:
+          type: string
+          title: Target Metric
+        quantity:
+          type: integer
+          title: Quantity
+          examples:
+          - 10000
+        unit:
+          type: string
+          title: Unit
+          examples:
+          - images
+        due_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Due Date
+        spec_version_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Spec Version Id
+        spec_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Spec Id
+          description: The spec that `spec_version_id` belongs to.
+        spec_version:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Spec Version
+          description: The version number of `spec_version_id`.
+        status:
+          type: string
+          enum:
+          - draft
+          - open
+          - closed
+          - cancelled
+          title: Status
+        allocated:
+          items:
+            $ref: '#/components/schemas/AllocatedTotal'
+          type: array
+          title: Allocated
+          description: Allocated so far, per unit and currency (cancelled allocations
+            excluded). May exceed `quantity`, e.g. to cover expected rejects.
+        opened_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Opened At
+        closed_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Closed At
+        cancelled_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Cancelled At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - project_id
+      - capability_id
+      - title
+      - requested_by
+      - priority
+      - rationale
+      - target_metric
+      - quantity
+      - unit
+      - due_date
+      - spec_version_id
+      - spec_id
+      - spec_version
+      - status
+      - allocated
+      - opened_at
+      - closed_at
+      - cancelled_at
+      - created_at
+      - updated_at
+      title: Request
+    RequestCreate:
+      properties:
+        capability_id:
+          type: string
+          title: Capability Id
+          description: The capability this data should improve.
+        title:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Title
+        requested_by:
+          type: string
+          maxLength: 200
+          title: Requested By
+          description: Who asked for the data.
+          default: ''
+        priority:
+          type: string
+          enum:
+          - P0
+          - P1
+          - P2
+          - P3
+          title: Priority
+          default: P2
+        rationale:
+          type: string
+          maxLength: 10000
+          title: Rationale
+          description: Why the data is needed.
+          default: ''
+        target_metric:
+          type: string
+          maxLength: 200
+          title: Target Metric
+          description: The eval metric or slice to move, if narrower.
+          default: ''
+        quantity:
+          type: integer
+          maximum: 1000000000.0
+          exclusiveMinimum: 0.0
+          title: Quantity
+          examples:
+          - 10000
+        unit:
+          type: string
+          maxLength: 32
+          minLength: 1
+          pattern: ^[a-z][a-z0-9_ ]*$
+          title: Unit
+          default: items
+        due_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Due Date
+        spec_version_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Spec Version Id
+          description: The spec version to use (an `spv_` id). Can be added later.
+            Must be approved before the request is opened.
+      additionalProperties: false
+      type: object
+      required:
+      - capability_id
+      - title
+      - quantity
+      title: RequestCreate
+      examples:
+      - capability_id: cap_01m5n7gwqfa18zhpw1zwh7w2zy
+        due_date: '2026-12-15'
+        priority: P1
+        quantity: 10000
+        rationale: Recall drops to 0.64 on shrink-wrap; damaged cosmetics returns
+          are spiking.
+        requested_by: Priya Nair
+        target_metric: recall@0.5, shrink-wrapped slice
+        title: Shrink-wrapped and glossy packaging
+        unit: images
+    RequestUpdate:
+      properties:
+        title:
+          anyOf:
+          - type: string
+            maxLength: 200
+            minLength: 1
+          - type: 'null'
+          title: Title
+        requested_by:
+          anyOf:
+          - type: string
+            maxLength: 200
+          - type: 'null'
+          title: Requested By
+        priority:
+          anyOf:
+          - type: string
+            enum:
+            - P0
+            - P1
+            - P2
+            - P3
+          - type: 'null'
+          title: Priority
+        rationale:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Rationale
+        target_metric:
+          anyOf:
+          - type: string
+            maxLength: 200
+          - type: 'null'
+          title: Target Metric
+        quantity:
+          anyOf:
+          - type: integer
+            maximum: 1000000000.0
+            exclusiveMinimum: 0.0
+          - type: 'null'
+          title: Quantity
+        unit:
+          anyOf:
+          - type: string
+            maxLength: 32
+            minLength: 1
+            pattern: ^[a-z][a-z0-9_ ]*$
+          - type: 'null'
+          title: Unit
+        due_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Due Date
+        spec_version_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Spec Version Id
+      additionalProperties: false
+      type: object
+      title: RequestUpdate
+      description: Draft and open requests only. Fields you send are changed; the
+        rest are kept.
+      examples:
+      - priority: P0
+        spec_version_id: spv_01m5n7gwqfa18zhpw1zwh7w2zy
     Spec:
       properties:
         id:

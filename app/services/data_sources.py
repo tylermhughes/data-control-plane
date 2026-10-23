@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from sqlalchemy.orm import Session
 
 from app.ids import new_id
-from app.models import DataSource
+from app.models import Allocation, DataSource
 from app.schemas import data_sources as schemas
 from app.services import events, scoped
 from app.services.principal import Principal
@@ -73,6 +73,7 @@ def update_source(
 def delete_source(session: Session, actor: Principal, src_id: str) -> None:
     src = get_source(session, actor, src_id)
     actor.require_write()
+    scoped.refuse_if_used(session, LABEL, {"allocation": Allocation.data_source_id == src.id})
     _emit(session, "data_source.deleted", src, actor)
     session.delete(src)
     session.flush()

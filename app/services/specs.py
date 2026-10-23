@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.errors import Conflict, Invalid, NotFound
 from app.ids import new_id
-from app.models import Spec, SpecVersion
+from app.models import Allocation, Request, Spec, SpecVersion
 from app.models.base import utcnow
 from app.schemas import specs as schemas
 from app.services import events, scoped
@@ -106,6 +106,15 @@ def update_spec(session: Session, actor: Principal, spec_id: str, body: schemas.
 def delete_spec(session: Session, actor: Principal, spec_id: str) -> None:
     spec = get_spec(session, actor, spec_id)
     actor.require_write()
+    version_ids = [v.id for v in spec.versions]
+    scoped.refuse_if_used(
+        session,
+        LABEL,
+        {
+            "request": Request.spec_version_id.in_(version_ids),
+            "allocation": Allocation.spec_version_id.in_(version_ids),
+        },
+    )
     _emit_spec(session, "spec.deleted", spec, actor)
     session.delete(spec)
     session.flush()
@@ -197,6 +206,9 @@ def delete_version(session: Session, actor: Principal, spec_id: str, number: int
     _require_draft(version)
     if len(version.spec.versions) == 1:
         raise Conflict("This is the spec's only version. Delete the spec instead.")
+    scoped.refuse_if_used(
+        session, "spec version", {"request": Request.spec_version_id == version.id}
+    )
     _emit_version(session, "spec_version.deleted", version, actor)
     version.spec.versions.remove(version)
     session.flush()

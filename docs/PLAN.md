@@ -10,7 +10,7 @@ This file is kept up to date as each milestone moves forward (see the status tab
 | M0 | Skeleton + Mac setup | ✅ Done (tested by Tyler 2026-10-23) |
 | M1 | API keys + projects | ✅ Done (tested by Tyler 2026-10-23) |
 | M2 | Capabilities, sources, versioned specs | ✅ Done (tested by Tyler 2026-10-23) |
-| M3 | Requests + allocations | ⚪ Not started |
+| M3 | Requests + allocations | ✅ Done (tested by Tyler 2026-10-23) |
 | M4a | Batches + manual accept/reject | ⚪ Not started |
 | M4b | Events + outbound webhooks | ⚪ Not started |
 | M5 | Datasets, evals, coverage, portfolio (north star) | ⚪ Not started |
@@ -111,4 +111,10 @@ Testing uses **`http://localhost:8000/docs` → "Try it out"**, with curl as a b
 - 2026-10-23 (M2): money is a string in one canonical form: at least 2 decimals, up to 4 when needed (`"25000.00"`, `"0.0125"`). That way Terraform and scripts never see false changes.
 - 2026-10-23 (M2): IDs are strictly increasing within a process, even within one millisecond, so events always sort in the order they happened.
 - 2026-10-23 (M2, M1 follow-up): `Idempotency-Key` must be letters, digits or `. _ : -` (1-255). Every request body in /docs shows a realistic example (enforced by a test).
+- 2026-10-23 (M3): request status goes draft → open → closed, or cancelled, changed through actions (`/open`, `/close`, `/cancel`). Opening needs an approved spec version, and an open request must keep one. Priority is P0–P3 (default P2). The request's project comes from its capability.
+- 2026-10-23 (M3): allocation status goes planned → active → complete, or cancelled. A new allocation needs the request (draft or open) to have an approved spec version, and the allocation pins that exact version. Activating needs an open request. Planned allocations can change anything; active ones only quantity, due date and notes; complete or cancelled ones nothing. Only planned allocations can be deleted.
+- 2026-10-23 (M3): over-allocation is allowed. Requests show allocated quantity and quoted cost per unit and currency (cancelled ones excluded).
+- 2026-10-23 (M3): closing a request cancels its planned allocations and is refused while any are active. Cancelling a request cancels its planned and active allocations; completed ones stay.
+- 2026-10-23 (M3): deleting something in use by requests or allocations is refused, naming up to 3 users. Requests with allocations can't be deleted; cancel them instead.
+- 2026-10-23 (M3): the split planner (recommendations) is in M8. Budgets are to be discussed at M5.
 - 2026-10-23 (M0): MinIO is deferred to M6, the first milestone that reads files. oasdiff is deferred until there is a first release to compare against.

@@ -28,14 +28,19 @@ class Timestamped:
     )
 
 
-class ProjectScoped(Timestamped):
-    """Columns shared by everything that lives inside a project. Names are unique per project."""
+class InProject(Timestamped):
+    """Columns shared by everything that lives inside a project."""
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
-    name: Mapped[str] = mapped_column(String(200))
-    description: Mapped[str] = mapped_column(Text, default="")
 
     @declared_attr
     def project_id(cls) -> Mapped[str]:
         # RESTRICT: a project can't be deleted while things still live in it.
         return mapped_column(ForeignKey("projects.id", ondelete="RESTRICT"), index=True)
+
+
+class ProjectScoped(InProject):
+    """Named things inside a project. Names are unique per project."""
+
+    name: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str] = mapped_column(Text, default="")

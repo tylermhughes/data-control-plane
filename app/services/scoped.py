@@ -6,13 +6,14 @@
 """
 
 from collections.abc import Sequence
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import Session
 
 from app.errors import Conflict, Invalid, NotFound
-from app.models import Project
-from app.models.base import ProjectScoped
+from app.models import Allocation, Project, Request
+from app.models.base import InProject, ProjectScoped
 from app.services.pagination import paginate
 from app.services.principal import Principal
 
@@ -28,7 +29,7 @@ def resolve_project_id(session: Session, actor: Principal, project_id: str | Non
     return project_id
 
 
-def get_scoped[M: ProjectScoped](
+def get_scoped[M: InProject](
     session: Session, actor: Principal, model: type[M], obj_id: str, label: str
 ) -> M:
     obj = session.get(model, obj_id)
@@ -37,7 +38,7 @@ def get_scoped[M: ProjectScoped](
     return obj
 
 
-def list_scoped[M: ProjectScoped](
+def list_scoped[M: InProject](
     session: Session,
     actor: Principal,
     model: type[M],
@@ -45,8 +46,9 @@ def list_scoped[M: ProjectScoped](
     project_id: str | None,
     limit: int,
     cursor: str | None,
+    where: Sequence[ColumnElement[bool]] = (),
 ) -> tuple[Sequence[M], str | None]:
-    stmt = select(model)
+    stmt = select(model).where(*where)
     if not actor.is_admin:
         stmt = stmt.where(model.project_id == actor.project_id)
     if project_id:
@@ -64,6 +66,22 @@ def check_name_free(
         raise Conflict(f"A {label} named '{name}' already exists in this project.")
 
 
-def apply_changes(obj: object, changes: dict[str, object]) -> None:
+def refuse_if_used(session: Session, what: str, users: dict[str, ColumnElement[bool]]) -> None:
+    """Refuse a delete while other things still point at it, naming them.
+
+    `users` maps a label (e.g. "request") to a condition selecting the rows that use it.
+    """
+    tables: dict[str, type[Request] | type[Allocation]] = {
+        "request": Request,
+        "allocation": Allocation,
+    }
+    for label, condition in users.items():
+        ids = session.scalars(select(tables[label].id).where(condition).limit(4)).all()
+        if ids:
+            shown = ", ".join(ids[:3]) + (", ..." if len(ids) > 3 else "")
+            raise Conflict(f"This {what} is used by {label}(s) {shown}. It can't be deleted.")
+
+
+def apply_changes(obj: object, changes: dict[str, Any]) -> None:
     for field, value in changes.items():
         setattr(obj, field, value)
