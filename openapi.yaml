@@ -1,0 +1,71 @@
+openapi: 3.1.0
+info:
+  title: Data Control Plane API
+  description: 'The control plane for AI training data: plan, route, check and measure
+    data from every source. Everything the product does is available through this
+    API.'
+  version: 0.1.0
+paths:
+  /healthz:
+    get:
+      tags:
+      - health
+      summary: Is the server running?
+      operationId: healthz_healthz_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+  /readyz:
+    get:
+      tags:
+      - health
+      summary: Can the server reach the database?
+      operationId: readyz_readyz_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+        '503':
+          description: Database unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+components:
+  schemas:
+    Health:
+      properties:
+        status:
+          type: string
+          const: ok
+          title: Status
+      type: object
+      required:
+      - status
+      title: Health
+    Readiness:
+      properties:
+        status:
+          type: string
+          enum:
+          - ok
+          - unavailable
+          title: Status
+        database:
+          type: string
+          enum:
+          - ok
+          - unavailable
+          title: Database
+      type: object
+      required:
+      - status
+      - database
+      title: Readiness

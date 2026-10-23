@@ -1,0 +1,1353 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Data Control Plane v0.002</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky top bar, left nav + work area; board is a horizontally scrolling set of stage columns (Linear-style), detail opens in a right drawer. */
+:root {
+  --bg: #f4f6f5; --surface: #ffffff; --surface-2: #eaeeec; --line: #d6ddd9; --fg: #16201a; --muted: #5a665f;
+  --accent: #0b6e3b; --accent-ink: #0a5c32; --accent-soft: #e2f1e8;
+  --band: #0b4f2c; --band-fg: #ffffff; --band-muted: #b9d6c4;
+  --good: #2a8a52; --good-soft: #e3f3e9; --warn: #9b6a10; --warn-soft: #fbf0d6; --bad: #b93b35; --bad-soft: #fbe5e3;
+  --v-mercor: #3a6bd4; --v-surge: #7a4fd1; --v-micro1: #11807f;
+  --shadow: 0 8px 30px rgba(20, 26, 40, .14); color-scheme: light;
+  --pkg-box: #c8a26a; --pkg-mailer: #d3d8e2; --pkg-shrink: #b2cddb;
+  --cap-a: #0b6e3b; --cap-b: #3f6e9e; --cap-c: #6a5fc1; --cap-d: #8a93a3;
+  --s-human: #3a6bd4; --s-expert: #a4512a; --s-syn: #7a4fd1; --s-env: #0e7490; --s-ent: #7a8a2e; --s-beta: #b8860b; --s-lic: #64748b;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.45 var(--sans); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 40; background: var(--band); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--mono); font-size: 12px; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Top bar */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: var(--band); color: var(--band-fg); border-bottom: 1px solid var(--band);
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-block: 10px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.logo { width: 22px; height: 22px; border-radius: 6px; background: #ffffff; position: relative; }
+.logo::after { content: ""; position: absolute; inset: 6px; border-radius: 2px; background: var(--accent); }
+.crumb { color: var(--band-muted); display: flex; gap: 8px; align-items: center; min-width: 0; }
+.crumb b { color: var(--band-fg); font-weight: 500; }
+.spacer { flex: 1; }
+.btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 7px; padding: 6px 12px; cursor: pointer; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+.topbar .btn.primary { background: #ffffff; color: var(--band); border-color: #ffffff; }
+.topbar .mono.muted { color: var(--band-muted); }
+.btn.primary:hover { opacity: .9; }
+kbd { font-family: var(--mono); font-size: 11px; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; opacity: .7; }
+.notice { background: var(--surface-2); color: var(--muted); font-size: 12.5px; padding-block: 6px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Shell */
+.shell { display: grid; grid-template-columns: 196px minmax(0, 1fr); gap: 24px; max-width: 1480px; margin: 0 auto; width: 100%;
+  padding-block: 18px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.side { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 72px; align-self: start; }
+.side .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 12px 10px 6px; }
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-radius: 7px; text-decoration: none; color: var(--fg); white-space: nowrap; }
+.nav:hover { background: var(--surface-2); }
+.nav[aria-current="page"] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); color: var(--accent-ink); font-weight: 600; }
+.nav .count { font-size: 12px; color: var(--muted); }
+.side .program { padding: 7px 10px; color: var(--muted); font-size: 13px; display: flex; gap: 8px; align-items: center; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+main { min-width: 0; }
+.view-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+h1 { font-size: 20px; font-weight: 600; margin: 0; text-wrap: balance; }
+h2 { font-size: 15px; font-weight: 600; margin: 0 0 10px; }
+h3 { font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+.sub { color: var(--muted); margin-top: 2px; }
+
+/* Stats strip */
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin-bottom: 16px; }
+.stat { padding: 12px 14px; border-left: 1px solid var(--line); min-width: 0; }
+.stat:first-child { border-left: 0; }
+.stat .k { font-size: 12px; color: var(--muted); }
+.stat .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.stat .v small { font-size: 12px; font-weight: 400; color: var(--muted); }
+.meter { height: 4px; border-radius: 4px; background: var(--surface-2); margin-top: 8px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+
+/* Filters */
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 10px; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.chip[aria-pressed="true"] { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+.sw { width: 8px; height: 8px; border-radius: 2px; display: inline-block; flex: none; }
+.v-mercor { --v: var(--v-mercor); } .v-surge { --v: var(--v-surge); } .v-micro1 { --v: var(--v-micro1); }
+.sw { background: var(--v, var(--muted)); }
+
+/* Board */
+.board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(248px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 10px; }
+.col { background: var(--surface-2); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.col-head { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 4px; font-size: 13px; font-weight: 500; }
+.col-head span { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.card { display: flex; flex-direction: column; gap: 6px; text-align: left; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer; }
+.card:hover { border-color: var(--muted); }
+.card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.card-title { font-weight: 500; line-height: 1.3; }
+.card-meta { font-size: 12.5px; color: var(--muted); }
+.card-foot { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.vchip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
+.bar { height: 4px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--v, var(--accent)); }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 500; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.neutral { background: var(--surface-2); color: var(--muted); }
+.pill.accent { background: var(--accent-soft); color: var(--accent-ink); }
+.flag { font-size: 12px; border-radius: 6px; padding: 6px 8px; line-height: 1.35; }
+.flag.Quality { background: var(--warn-soft); color: var(--warn); }
+.flag.Integrity { background: var(--bad-soft); color: var(--bad); }
+.flag b { font-weight: 600; }
+
+/* Panels */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
+.grid-list { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; align-items: start; }
+.list { display: flex; flex-direction: column; gap: 4px; }
+.list button { text-align: left; background: none; border: 1px solid transparent; border-radius: 8px; padding: 8px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.list button:hover { background: var(--surface-2); }
+.list button[aria-current="true"] { background: var(--surface); border-color: var(--line); }
+.list button span { font-size: 12px; color: var(--muted); }
+.stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* Spec */
+.spec-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; user-select: none; }
+.toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+.rules { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.rules li { padding-left: 2px; }
+.rule-section { padding-top: 14px; border-top: 1px solid var(--line); margin-top: 14px; }
+.ins { background: var(--good-soft); color: var(--fg); border-radius: 4px; padding: 1px 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.del { background: var(--bad-soft); color: var(--bad); text-decoration: line-through; border-radius: 4px; padding: 1px 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.tag { font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; margin-right: 6px; }
+.legend { display: flex; gap: 12px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+.qbar { position: relative; height: 8px; background: var(--surface-2); border-radius: 4px; min-width: 120px; }
+.qbar i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--muted); }
+.qbar i.low { background: var(--warn); }
+.qbar b { position: absolute; top: -3px; width: 2px; height: 14px; background: var(--fg); }
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.timeline li { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: 10px; }
+.timeline li::before { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--line); margin-top: 5px; }
+.timeline li.current::before { border-color: var(--accent); background: var(--accent); }
+.comment { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; font-size: 13px; }
+.comment:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+.who { font-weight: 500; }
+
+/* Lineage */
+.chain { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding-bottom: 6px; }
+.node { flex: none; width: 168px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--surface); display: flex; flex-direction: column; gap: 4px; }
+.node.wide { width: 250px; }
+.node.result { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
+.node .kind { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.node .name { font-weight: 500; line-height: 1.3; }
+.node .detail { font-size: 12px; color: var(--muted); }
+.result .kind, .result .detail { color: var(--accent-ink); }
+.arrow { flex: none; width: 26px; display: grid; place-items: center; color: var(--muted); }
+.arrow::before { content: "\2192"; }
+.brow { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 12.5px; padding: 4px 6px; border-radius: 6px; background: none; border: 0; cursor: pointer; text-align: left; width: 100%; }
+.brow:hover { background: var(--surface-2); }
+.delta.up { color: var(--good); font-weight: 600; } .delta.down { color: var(--bad); font-weight: 600; }
+.soon { border: 1px dashed var(--line); border-radius: 10px; padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+
+/* Vendors */
+.vgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.vcard { border-top: 3px solid var(--v); }
+.vcard .vname { font-weight: 600; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
+.kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; margin-top: 12px; font-size: 13px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+.cmp { display: grid; grid-template-columns: 70px minmax(0, 1fr) 64px; gap: 8px; align-items: center; font-size: 12.5px; margin-top: 6px; }
+.cmp .track { height: 10px; background: var(--surface-2); border-radius: 3px; position: relative; overflow: hidden; }
+.cmp .track i { position: absolute; inset: 0 auto 0 0; background: var(--v); border-radius: 3px; }
+.cmp-block { padding: 12px 0; border-top: 1px solid var(--line); }
+.cmp-block:first-of-type { border-top: 0; padding-top: 0; }
+.cmp-title { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 500; }
+
+/* Drawer & modal */
+.scrim { position: fixed; inset: 0; background: rgba(10, 12, 18, .35); z-index: 50; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100%); background: var(--surface); border-left: 1px solid var(--line); box-shadow: var(--shadow); z-index: 60; overflow-y: auto;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) 20px; display: flex; flex-direction: column; gap: 16px; }
+.drawer-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.x { border: 0; background: var(--surface-2); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; flex: none; font-size: 16px; line-height: 1; }
+.section-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.modal { position: fixed; z-index: 60; left: 50%; top: 12vh; transform: translateX(-50%); width: min(520px, calc(100% - 32px)); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 18px 20px; }
+form { display: flex; flex-direction: column; gap: 12px; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); }
+input[type=text], input[type=number], input[type=date], textarea, select { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; }
+textarea { resize: vertical; min-height: 64px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.actions { display: flex; justify-content: flex-end; gap: 8px; }
+.toast { position: fixed; z-index: 70; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; box-shadow: var(--shadow); }
+
+/* Batch page */
+.back { background: none; border: 0; padding: 0; color: var(--muted); cursor: pointer; font-size: 13px; margin-bottom: 8px; }
+.back:hover { color: var(--fg); }
+.stats.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.chartwrap { overflow-x: auto; }
+.chart { display: block; width: 100%; min-width: 520px; height: auto; }
+.chart .g { stroke: var(--line); }
+.chart text { fill: var(--muted); font-size: 11px; font-family: var(--sans); }
+.chart .bar { fill: var(--v); }
+.chart .partial { fill: var(--v); fill-opacity: .4; }
+.chart .need { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.chart-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.lg-bar { width: 10px; height: 10px; border-radius: 2px; background: var(--v); }
+.lg-line { width: 18px; border-top: 2px dashed var(--accent); }
+.qgroup + .qgroup { margin-top: 14px; }
+.qrow { display: grid; grid-template-columns: 120px minmax(0, 1fr) 104px 48px; gap: 10px; align-items: center; font-size: 13px; padding: 4px 0; }
+.qtrack { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.qtrack i { display: block; height: 100%; background: var(--v); border-radius: 4px; }
+.qtrack i.low { background: var(--warn); }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.tile { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); display: flex; flex-direction: column; }
+.tile svg { display: block; width: 100%; height: auto; }
+.tile .cap { padding: 8px 10px 10px; font-size: 12px; display: flex; flex-direction: column; gap: 3px; }
+.tile .rej { color: var(--bad); }
+.src { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.src:first-of-type { border-top: 0; padding-top: 0; }
+.src code { font-family: var(--mono); font-size: 11.5px; color: var(--muted); word-break: break-all; }
+.issue { font-size: 13px; padding: 8px 10px; border-radius: 6px; line-height: 1.4; }
+.issue + .issue { margin-top: 8px; }
+.issue.warn { background: var(--warn-soft); color: var(--warn); }
+.issue.good { background: var(--good-soft); color: var(--good); }
+.reason { display: grid; grid-template-columns: minmax(0, 1fr) 40px; gap: 4px 10px; font-size: 13px; margin-top: 8px; }
+.reason .qtrack { grid-column: 1 / -1; }
+.reason .qtrack i { background: var(--bad); }
+
+/* Portfolio */
+.cap-a { --c: var(--cap-a); } .cap-b { --c: var(--cap-b); } .cap-c { --c: var(--cap-c); } .cap-d { --c: var(--cap-d); }
+.capname { display: inline-flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; cursor: pointer; font-weight: 500; text-align: left; }
+.capname:hover { text-decoration: underline; }
+.capname .sw { background: var(--c); }
+.ptrack { display: grid; grid-template-columns: minmax(80px, 1fr) 36px; gap: 8px; align-items: center; min-width: 130px; }
+.ptrack div { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.ptrack i { display: block; height: 100%; background: var(--c); border-radius: 4px; }
+.rchart { display: block; width: 100%; max-width: 720px; min-width: 480px; height: auto; }
+.rchart .g { stroke: var(--line); }
+.rchart text { fill: var(--muted); font-size: 11px; font-family: var(--sans); }
+.rchart text.end { fill: var(--fg); font-size: 12px; font-weight: 500; }
+.rec { border: 1px solid var(--accent); background: var(--accent-soft); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.rec h2 { margin: 0; }
+.rec .move { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: center; }
+.rec .side { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.rec .side .k { font-size: 12px; color: var(--muted); }
+.rec .side .v { font-weight: 600; font-size: 15px; font-variant-numeric: tabular-nums; }
+.rec .arrowbig { font-size: 20px; color: var(--accent-ink); }
+.tourbtn { border-color: var(--accent); color: var(--accent-ink); }
+.tour-on { position: relative; z-index: 56; border-radius: 10px; box-shadow: 0 0 0 3px var(--accent), 0 0 0 9999px rgba(10, 12, 18, .5); }
+.tourcard { position: fixed; z-index: 70; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); width: min(440px, calc(100% - 32px));
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+.tourcard .step { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); }
+.tourcard h3 { font-size: 15px; margin: 0; }
+.tourcard p { margin: 0; color: var(--muted); }
+.tourcard .actions { margin-top: 4px; }
+.leader-tag { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-ink); background: var(--accent-soft); border-radius: 4px; padding: 1px 5px; }
+@media (max-width: 560px) { .rec .move { grid-template-columns: minmax(0, 1fr); } .rec .arrowbig { transform: rotate(90deg); justify-self: center; } }
+
+/* Launch flow */
+.stepper { display: flex; margin-bottom: 18px; overflow-x: auto; }
+.st { flex: 1; min-width: 118px; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 0; border-bottom: 2px solid var(--line); background: none; color: var(--muted); text-align: left; white-space: nowrap; }
+.st .n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; border: 1.5px solid currentColor; flex: none; }
+.st.done { color: var(--fg); border-bottom-color: var(--good); cursor: pointer; }
+.st.done .n { background: var(--good); border-color: var(--good); color: var(--surface); }
+.st.cur { color: var(--fg); border-bottom-color: var(--accent); font-weight: 500; }
+.st.cur .n { border-color: var(--accent); color: var(--accent-ink); }
+.form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.checks { display: flex; gap: 8px 16px; flex-wrap: wrap; }
+.checks label { flex-direction: row; align-items: center; gap: 6px; color: var(--fg); font-size: 13px; }
+.checks input { accent-color: var(--accent); }
+.plans { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.plan { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--surface); text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 8px; }
+.plan:hover { border-color: var(--muted); }
+.plan[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.plan .pname { font-weight: 600; display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+.plan .pm { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.split { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--surface-2); }
+.split i { display: block; height: 100%; background: var(--v); }
+.split i + i { border-left: 2px solid var(--surface); }
+.splitkey { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; }
+.goals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.goal { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.goal .k { font-size: 12px; color: var(--muted); }
+.goal .v { font-weight: 600; font-size: 16px; font-variant-numeric: tabular-nums; margin: 2px 0 4px; }
+.why { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.adjust { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.adjust label { flex-direction: row; align-items: center; gap: 6px; color: var(--fg); }
+.adjust input { width: 76px; }
+.sendlist { display: flex; flex-direction: column; gap: 10px; }
+.packet { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; }
+.packet .pmeta { font-size: 12.5px; color: var(--muted); }
+.simnote { font-size: 12px; color: var(--muted); }
+/* Sources */
+.s-human { --v: var(--s-human); } .s-expert { --v: var(--s-expert); } .s-syn { --v: var(--s-syn); } .s-env { --v: var(--s-env); }
+.s-ent { --v: var(--s-ent); } .s-beta { --v: var(--s-beta); } .s-lic { --v: var(--s-lic); }
+.flag.Privacy { background: var(--accent-soft); color: var(--accent-ink); }
+.layers { display: flex; flex-direction: column; gap: 0; }
+.layer { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); align-items: start; }
+.layer:first-child { border-top: 0; padding-top: 0; }
+.layer .lname { font-weight: 600; }
+.layer .ldesc { font-size: 12px; color: var(--muted); }
+.layer.ours .lname::after { content: "This product"; display: block; width: fit-content; margin-top: 4px; font-size: 10.5px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--accent-ink); background: var(--accent-soft); border-radius: 4px; padding: 1px 5px; }
+.comps { display: flex; flex-wrap: wrap; gap: 6px; }
+.comp { font-size: 12.5px; border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; background: var(--surface); }
+.layer.ours .comp { border-color: var(--accent); background: var(--accent-soft); color: var(--fg); }
+.flowdown { text-align: center; color: var(--muted); font-size: 12px; margin: 2px 0; }
+.srcgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.srccard { text-align: left; border: 1px solid var(--line); border-top: 3px solid var(--v); border-radius: 10px; background: var(--surface); padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 8px; }
+.srccard:hover { border-color: var(--muted); border-top-color: var(--v); }
+.srccard .sname { font-weight: 600; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.srccard .what { font-size: 12.5px; color: var(--muted); }
+.srccard .kv { margin-top: 0; font-size: 12.5px; }
+@media (max-width: 760px) { .layer { grid-template-columns: minmax(0, 1fr); gap: 6px; } }
+
+@media (max-width: 1100px) { .plans { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .plans, .form-grid, .goals { grid-template-columns: minmax(0, 1fr); } .packet { grid-template-columns: minmax(0, 1fr); } }
+
+@media (max-width: 1100px) { .grid-2 { grid-template-columns: minmax(0, 1fr); } .vgrid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 860px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .side { position: static; flex-direction: row; overflow-x: auto; gap: 4px; }
+  .side .label, .side .program { display: none; }
+  .grid-list { grid-template-columns: minmax(0, 1fr); }
+  .list { flex-direction: row; overflow-x: auto; }
+  .list button { flex: none; }
+  .stats, .stats.five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(odd) { border-left: 0; }
+  .qrow { grid-template-columns: 96px minmax(0, 1fr) 92px; }
+  .qrow .pill { display: none; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .crumb .hide-sm { display: none; }
+}
+@media (max-width: 560px) {
+  .chain { flex-direction: column; overflow: visible; }
+  .node, .node.wide { width: 100%; }
+  .arrow { width: 100%; height: 22px; }
+  .arrow::before { content: "\2193"; }
+  .row { grid-template-columns: 1fr; }
+  .btn .label-lg { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .drawer:not([hidden]) { animation: slide .18s ease-out; }
+  @keyframes slide { from { transform: translateX(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+}
+</style>
+
+<header class="topbar">
+  <div class="brand"><span class="logo" aria-hidden="true"></span>Data Control Plane <span class="mono muted" style="font-weight:400">v0.002</span></div>
+  <div class="crumb"><span class="hide-sm">Northgate Commerce</span><span class="hide-sm">/</span><b>Fulfillment vision data · Q4 2026</b></div>
+  <div class="spacer"></div>
+  <button class="btn primary" id="newReqBtn" type="button">New request <kbd class="label-lg">C</kbd></button>
+</header>
+<div class="notice">Prototype with illustrative sample data. Northgate Commerce is fictional, and all vendor, source and model figures are invented for demonstration.</div>
+
+<div class="shell">
+  <nav class="side" aria-label="Views">
+    <div class="label">Executive Dashboard</div>
+    <a class="nav" href="#portfolio" data-view="portfolio">Data portfolio <span class="leader-tag">New</span></a>
+    <div class="label">Workspace</div>
+    <a class="nav" href="#sources" data-view="sources">Data sources <span class="leader-tag">New</span></a>
+    <a class="nav" href="#board" data-view="board">Program board <span class="count" id="cnt-board"></span></a>
+    <a class="nav" href="#specs" data-view="specs">Specs <span class="count">4</span></a>
+    <a class="nav" href="#datasets" data-view="datasets">Lineage &amp; spend <span class="count">2</span></a>
+    <a class="nav" href="#vendors" data-view="vendors">Vendors <span class="count">3</span></a>
+    <div class="label">Programs</div>
+    <div class="program"><span class="dot"></span>Package damage</div>
+    <div class="program"><span class="dot" style="background:var(--v-surge)"></span>Label legibility</div>
+    <div class="program"><span class="dot" style="background:var(--v-micro1)"></span>Pick verification</div>
+    <div class="program"><span class="dot" style="background:var(--muted)"></span>Robotic picking</div>
+  </nav>
+  <main id="main"></main>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Details"></aside>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" hidden>
+  <form id="reqForm">
+    <h2 id="modalTitle">New data request</h2>
+    <label for="f-title">What data do you need?
+      <input type="text" id="f-title" required placeholder="e.g. Crushed boxes under low dock lighting"></label>
+    <div class="row">
+      <label for="f-by">Requested by
+        <input type="text" id="f-by" value="Ty Hughes"></label>
+      <label for="f-pri">Priority
+        <select id="f-pri"><option>High</option><option selected>Medium</option><option>Low</option></select></label>
+    </div>
+    <label for="f-eval">Target eval or slice
+      <input type="text" id="f-eval" placeholder="e.g. Damage-Det recall, outbound dock slice"></label>
+    <label for="f-why">Why now
+      <textarea id="f-why" placeholder="What failure or deadline is driving this?"></textarea></label>
+    <div class="actions">
+      <button class="btn" type="button" id="cancelReq">Cancel</button>
+      <button class="btn primary" type="submit">Add to intake</button>
+    </div>
+  </form>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<div class="tourcard" id="tourcard" role="dialog" aria-live="polite" aria-label="Walkthrough" hidden></div>
+
+<script>
+(function () {
+  const V = { mercor: 'Mercor', surge: 'Surge', micro1: 'Micro1' };
+  const STAGES = [['request', 'Requests'], ['spec', 'Spec'], ['pilot', 'Pilot'], ['production', 'In production'], ['qa', 'In QA'], ['delivered', 'Delivered']];
+  const BUDGET = 200000;
+  const SRC = {
+    human: { name: 'Human vendors', short: 'Human vendors', cls: 's-human', unit: 'images', what: 'Vendors label or collect data to your spec.', sources: ['Mercor', 'Surge', 'Micro1'], check: 'Gold set, rater agreement, contributor fraud checks', rights: 'Vendor MSA; contributor consent on file', best: 'Precise labels at volume', connector: 'Delivery bucket + manifests', status: 'Connected' },
+    expert: { name: 'Expert networks', short: 'Experts', cls: 's-expert', unit: 'reviews', what: 'Credentialed specialists write rules and rubrics and label the hardest cases.', sources: ['Mercor experts (hazmat)', 'Northgate safety team'], check: 'Expert agreement, spot audits', rights: 'Expert agreements; IP assigned to Northgate', best: 'Rules and edge cases that need credentials', connector: 'Review tool export', status: 'Manual upload' },
+    synthetic: { name: 'Synthetic data', short: 'Synthetic', cls: 's-syn', unit: 'images', what: 'Rendered or generated images for rare, risky or expensive conditions.', sources: ['Northgate SimLab (rendered docks)', 'Generative augmentation (glare, blur)'], check: 'Realism score, tested against a real-only holdout set', rights: 'Owned; 3D asset licenses checked', best: 'Cheap volume for rare conditions', connector: 'Sim pipeline hook', status: 'Connected' },
+    rlenv: { name: 'RL environments', short: 'RL environments', cls: 's-env', unit: 'tasks', what: 'Simulated tasks with graders, so robot and agent policies learn by trial and error.', sources: ['EnvWorks picking sim', 'In-house dock-ops agent env'], check: 'Grader review, reward-hacking tests, pass-rate calibration', rights: 'Environment license, 12-month exclusivity', best: 'Robot and agent policies', connector: 'Environment run logs', status: 'Connected' },
+    enterprise: { name: 'Enterprise workflows', short: 'Workflows', cls: 's-ent', unit: 'records', what: 'Data Northgate’s own operations already produce: returns, claims, scans, cameras.', sources: ['Returns and damage claims', 'Conveyor cameras (sampled)', 'WMS scan exceptions'], check: 'PII redaction, dedupe, labels from claim outcomes', rights: 'Customer terms allow product improvement; faces and addresses redacted', best: 'Real failures from your own operations', connector: 'Internal system connectors', status: 'Connected' },
+    beta: { name: 'In-house testers & beta users', short: 'Beta users', cls: 's-beta', unit: 'flags', what: 'Associates and beta sites flag what the model gets wrong on the floor.', sources: ['Reno beta site (42 associates)', 'Dallas pilot line'], check: 'Supervisor confirms each flag', rights: 'Employee data notice signed', best: 'Hard cases the model misses today', connector: 'Beta app + “model was wrong” button', status: 'Connected' },
+    licensed: { name: 'Licensed datasets', short: 'Licensed', cls: 's-lic', unit: 'images', what: 'Existing datasets bought under a training license.', sources: ['Carrier imagery archive (3 carriers)'], check: 'Dedupe against owned data, sample audit', rights: 'Training use, 3 years, no redistribution', best: 'Fast coverage you can’t collect yourself', connector: 'One-time import', status: 'One-time import' }
+  };
+  const SRC_ORDER = ['human', 'expert', 'synthetic', 'rlenv', 'enterprise', 'beta', 'licensed'];
+
+  const items = [
+    { id: 'REQ-129', kind: 'request', stage: 'request', title: 'Shrink-wrapped and glossy packaging', by: 'Priya Nair', evalName: 'Damage-Det recall, reflective slice', priority: 'High', why: 'Recall drops to 0.64 on shrink-wrap. Damaged cosmetics orders are driving a spike in returns.' },
+    { id: 'REQ-127', kind: 'request', stage: 'request', title: 'Cold-chain packages with condensation', by: 'Marco Díaz', evalName: 'Damage-Det, cold-chain slice', priority: 'Medium', why: 'Grocery fulfillment launches at three new sites in Q1. Current set has under 2% cold-chain images.' },
+    { id: 'REQ-130', kind: 'request', stage: 'request', title: 'Re-check damage severity labels on v3.1 data', by: 'Dana Okafor', evalName: 'Damage-Det, severity accuracy', priority: 'Medium', why: 'v3.1 used low, medium, high. v3.2 moved to a 1–5 scale tied to the returns policy, so older labels are inconsistent.' },
+    { id: 'B-2070', kind: 'batch', stage: 'spec', title: 'Robotic picking: segment new apparel items', vendor: null, note: 'Quotes in from Surge and Micro1', units: 30000, unit: 'images', spec: 'Pick segmentation v0.3', specId: 'ho', req: 'REQ-124', due: '2026-11-20', spend: 0, progress: 0 },
+    { id: 'B-2043', kind: 'batch', stage: 'pilot', title: 'Package damage: boxes + severity', vendor: 'micro1', units: 500, unit: 'images', spec: 'Package damage v3.2', specId: 'ped', req: 'REQ-112', due: '2026-10-24', spend: 780, progress: 100, agree: 0.81, delivered: 500, accepted: 431, dataset: 'ped', flag: { type: 'Quality', text: 'Rater agreement 0.81 on small dents, below the 0.85 target.' } },
+    { id: 'B-2042', kind: 'batch', stage: 'production', title: 'Package damage: boxes + severity', vendor: 'surge', units: 8000, unit: 'images', spec: 'Package damage v3.2', specId: 'ped', req: 'REQ-112', due: '2026-11-04', spend: 7140, progress: 62, agree: 0.92, delivered: 4960, accepted: 4810, dataset: 'ped' },
+    { id: 'B-2052', kind: 'batch', stage: 'production', title: 'Shipping labels: obstruction tags', vendor: 'mercor', units: 15000, unit: 'images', spec: 'Label legibility v2.0', specId: 'gaze', req: 'REQ-118', due: '2026-11-12', spend: 9450, progress: 38, agree: 0.88, delivered: 5700, accepted: 4380, dataset: 'gaze', flag: { type: 'Integrity', text: '3 annotator accounts share one device fingerprint. Their 1,140 images are held for review.' } },
+    { id: 'B-2041', kind: 'batch', stage: 'qa', title: 'Package damage: boxes + severity', vendor: 'mercor', units: 12000, unit: 'images', spec: 'Package damage v3.2', specId: 'ped', req: 'REQ-112', due: '2026-10-28', spend: 18600, progress: 100, qa: 94.1, agree: 0.89, delivered: 12000, accepted: 11290, dataset: 'ped' },
+    { id: 'B-2060', kind: 'batch', stage: 'qa', title: 'Pick verification: item outlines', vendor: 'micro1', units: 4000, unit: 'images', spec: 'Pick verification v1.4', specId: 'glare', req: 'REQ-121', due: '2026-10-25', spend: 6400, progress: 100, qa: 88.9, agree: 0.84, delivered: 4000, accepted: 3556, flag: { type: 'Quality', text: '11.1% rejected: outlines cut off at the tote wall (rule 4.2).' } },
+    { id: 'B-2061', kind: 'batch', stage: 'delivered', title: 'Pick verification: item outlines', vendor: 'mercor', units: 4000, unit: 'images', spec: 'Pick verification v1.4', specId: 'glare', req: 'REQ-121', due: '2026-10-14', spend: 7200, progress: 100, qa: 96.0, agree: 0.9, delivered: 4000, accepted: 3840 },
+    { id: 'B-2051', kind: 'batch', stage: 'delivered', title: 'Shipping labels: text regions', vendor: 'surge', units: 20000, unit: 'images', spec: 'Label legibility v2.0', specId: 'gaze', req: 'REQ-118', due: '2026-10-09', spend: 31200, progress: 100, qa: 97.3, agree: 0.93, delivered: 20000, accepted: 19460, dataset: 'gaze' },
+    { id: 'EXP-12', kind: 'batch', srcType: 'expert', source: 'Mercor experts (hazmat)', stage: 'spec', title: 'Hazmat and handling-mark rules review', units: 600, unit: 'expert reviews', spec: 'Label legibility v2.0', specId: 'gaze', req: 'REQ-133', due: '2026-11-18', spend: 0, progress: 0, note: '4 certified hazmat specialists shortlisted' },
+    { id: 'ENV-07', kind: 'batch', srcType: 'rlenv', source: 'EnvWorks picking sim', stage: 'pilot', title: 'Robotic picking sim environment v2', units: 300, unit: 'tasks', spec: 'Pick segmentation v0.3', specId: 'ho', req: 'REQ-124', due: '2026-11-10', spend: 24000, progress: 100, delivered: 300, accepted: 268, note: 'Starting pass rate 4% (target 2–10%)', flag: { type: 'Quality', text: 'Reward hacking: the policy scores by nudging items toward the camera. Grader patch in review.' } },
+    { id: 'SYN-031', kind: 'batch', srcType: 'synthetic', source: 'Northgate SimLab', stage: 'production', title: 'Low-light dock renders, shrink-wrap', units: 40000, unit: 'images', spec: 'Package damage v3.2', specId: 'ped', req: 'REQ-112', due: '2026-11-06', spend: 3200, progress: 55, delivered: 22000, accepted: 19800, note: 'Realism score 0.87 (target 0.85)' },
+    { id: 'PRD-04', kind: 'batch', srcType: 'enterprise', source: 'Returns and damage claims', stage: 'production', title: 'Customer damage-claim photos', units: 6000, unit: 'images', spec: 'Package damage v3.2', specId: 'ped', req: 'REQ-112', due: '2026-11-15', spend: 1100, progress: 70, delivered: 4200, accepted: 3610, flag: { type: 'Privacy', text: '3% of photos show faces or home addresses. Auto-redaction runs before anything reaches training.' } },
+    { id: 'BETA-02', kind: 'batch', srcType: 'beta', source: 'Reno beta site', stage: 'qa', title: 'Associate “model was wrong” flags', units: 1200, unit: 'flags', spec: 'Package damage v3.2', specId: 'ped', req: 'REQ-129', due: '2026-10-30', spend: 600, progress: 100, delivered: 1200, accepted: 940, note: '940 of 1,200 flags confirmed by supervisors' },
+    { id: 'LIC-02', kind: 'batch', srcType: 'licensed', source: 'Carrier imagery archive', stage: 'delivered', title: 'Licensed carrier package imagery', units: 50000, unit: 'images', spec: 'Package damage v3.2', specId: 'ped', req: 'REQ-112', due: '2026-10-02', spend: 18000, progress: 100, delivered: 50000, accepted: 21500, note: '57% removed as near-duplicates of data Northgate already owns' }
+  ];
+
+  const specs = {
+    ped: {
+      name: 'Package damage detection', version: 'v3.2', prev: 'v3.1', status: 'Approved', approver: 'Priya Nair', date: 'Oct 12', batches: ['B-2041', 'B-2042', 'B-2043'],
+      sections: [
+        { h: '1. Scope', rules: [
+          { t: 'Label every area of visible damage on a package face that is at least 12 px across.', s: 'changed', old: 'Label every area of visible damage on a package face that is at least 20 px across.' },
+          { t: 'Use one box per damaged area. Do not group adjacent dents.', s: 'same' } ] },
+        { h: '2. Damage types and conveyor zones', rules: [
+          { t: 'Label tears, crushes, punctures and water damage. Crush depth: none, minor (under 2 cm) or major (2 cm or more).', s: 'changed', old: 'Label tears and crushes only. Major crush starts at 4 cm.' },
+          { t: 'On shrink-wrap and glossy mailers, label damage even when glare hides part of it, as long as one edge is visible.', s: 'added' },
+          { t: 'Tag the conveyor zone per image: induct, sort or outbound dock.', s: 'same' } ] },
+        { h: '3. Attributes', rules: [
+          { t: 'Severity: rate 1–5 using the returns-policy reference card. “Unclear” is allowed.', s: 'changed', old: 'Severity: low, medium or high.' },
+          { t: 'Package type: corrugated box, poly mailer, padded envelope or shrink-wrapped.', s: 'same' },
+          { t: 'Carrier logo.', s: 'removed' } ] },
+        { h: '4. Quality', rules: [
+          { t: 'Every batch includes 5% gold images from GS-dock-500, the same set for every vendor.', s: 'same' },
+          { t: 'Agreement target: 0.85 or higher (IoU 0.7) on the small-dent subset.', s: 'added' } ] }
+      ],
+      quotas: [
+        { group: 'Package type', name: 'Corrugated box', target: 30, now: 34 },
+        { group: 'Package type', name: 'Poly mailer', target: 35, now: 37 },
+        { group: 'Package type', name: 'Shrink-wrapped', target: 35, now: 29 },
+        { group: 'Conveyor zone', name: 'Induct', target: 50, now: 55 },
+        { group: 'Conveyor zone', name: 'Sort', target: 35, now: 33 },
+        { group: 'Conveyor zone', name: 'Outbound dock', target: 15, now: 12 }
+      ],
+      versions: [
+        { v: 'v3.2', date: 'Oct 12', note: '1–5 severity scale, 12 px size floor, shrink-wrap rule, agreement target.', by: 'Approved by Priya Nair' },
+        { v: 'v3.1', date: 'Sep 3', note: 'Added package type attribute.', by: 'Approved by Priya Nair' },
+        { v: 'v3.0', date: 'Jul 18', note: 'First conveyor-specific guideline, split from Damage-Det v2.', by: 'Approved by Marco Díaz' }
+      ],
+      comments: [
+        { who: 'Dana Okafor', when: 'Oct 20', text: 'Shrink-wrapped is at 29% against a 35% target. Can we route the REQ-130 rework to Surge?' },
+        { who: 'Marco Díaz', when: 'Oct 21', text: 'Micro1 pilot agreement is 0.81 on small dents. Suggest one calibration round before we scale them.' }
+      ]
+    },
+    gaze: {
+      name: 'Shipping label legibility', version: 'v2.1', prev: 'v2.0', status: 'Draft', approver: 'Marco Díaz', date: 'Oct 23', batches: ['B-2051', 'B-2052', 'EXP-12'],
+      sections: [
+        { h: '1. Text regions', rules: [ { t: 'Box every text region on the label: address block, barcode and handling marks.', s: 'same' } ] },
+        { h: '2. Obstructions', rules: [ { t: 'Tag tape over the label, folds, smudges and torn labels.', s: 'same' }, { t: 'Skip images where the label is fully hidden.', s: 'same' } ] },
+        { h: '3. Label surface', rules: [ { t: 'New field: label surface (flat, curved or wrapped). v2.0 didn’t record it, so the curved-label gap could only be estimated.', s: 'added' } ] },
+        { h: '4. Collection mix', rules: [
+          { t: 'Quotas: taped-over 30%, curved or wrapped under glare 25%, torn or folded 15%, handwritten corrections 10%, clean flat 5%, other 15%.', s: 'changed', old: 'No quotas. Collect what arrives from sites (about 70% clean flat labels).' },
+          { t: 'Hazmat marks in at least 20% of images, to reach the 98% read-accuracy floor by Jan 31.', s: 'added' },
+          { t: 'Clean flat labels at any volume. Error there is already 0.6%.', s: 'removed' } ] }
+      ],
+      quotas: [
+        { group: 'Label condition', name: 'Taped-over', target: 30, now: 4 }, { group: 'Label condition', name: 'Curved under glare', target: 25, now: 3 },
+        { group: 'Label condition', name: 'Torn or folded', target: 15, now: 6 }, { group: 'Label condition', name: 'Handwritten', target: 10, now: 1 },
+        { group: 'Label condition', name: 'Clean flat', target: 5, now: 71 }, { group: 'Label condition', name: 'Other', target: 15, now: 15 }
+      ],
+      versions: [ { v: 'v2.1', date: 'Oct 23', note: 'Rescoped from the slice diagnosis: quotas for failing label conditions, label surface field, hazmat floor.', by: 'Drafted by Data Control Plane · needs Marco Díaz' },
+        { v: 'v2.0', date: 'Sep 22', note: 'Added obstruction tags.', by: 'Approved by Marco Díaz' } ],
+      comments: [ { who: 'Data Control Plane', when: 'Oct 23', text: '55% of read errors come from taped-over and curved labels, which are 7% of training data. Proposed quotas move future collection there.' },
+        { who: 'Dana Okafor', when: 'Oct 23', text: 'Agree. Can returns photos cover curved mailers? Vendors struggle to find them.' } ]
+    },
+    glare: {
+      name: 'Pick verification', version: 'v1.4', status: 'Approved', approver: 'Dana Okafor', date: 'Sep 30', batches: ['B-2060', 'B-2061'],
+      sections: [ { h: '4. Item outlines', rules: [ { t: 'Rule 4.2: outlines follow the item edge and may extend past the tote wall.', s: 'same' } ] } ],
+      quotas: [], versions: [ { v: 'v1.4', date: 'Sep 30', note: 'Clarified rule 4.2 on tote edges.', by: 'Approved by Dana Okafor' } ], comments: []
+    },
+    ho: {
+      name: 'Robotic picking segmentation', version: 'v0.3', status: 'Draft', approver: '', date: 'Oct 19', batches: ['B-2070'],
+      sections: [ { h: '1. Scope', rules: [ { t: 'Segment each apparel item in the bin and mark a suggested grasp point.', s: 'same' }, { t: 'Open question: label folded items as one object, or by visible layers?', s: 'same' } ] } ],
+      quotas: [], versions: [ { v: 'v0.3', date: 'Oct 19', note: 'Draft for vendor quotes.', by: 'Draft by Ty Hughes' } ], comments: []
+    }
+  };
+
+  const datasets = {
+    ped: { name: 'damage-det-v3.2-rc1', req: 'REQ-112', reqTitle: 'Damaged packages on the conveyor', specId: 'ped', batches: ['B-2041', 'B-2042', 'B-2043'],
+      run: 'dmg-r50-1023', runNote: 'Trained Oct 21 · logged in W&B', baseline: 'damage-det-v3.1',
+      evals: [ { m: 'Damage-Det recall@0.5', a: 0.812, b: 0.857, better: 'up' }, { m: 'Shrink-wrap slice recall', a: 0.741, b: 0.829, better: 'up' },
+        { m: 'Small-dent slice recall', a: 0.688, b: 0.702, better: 'up' }, { m: 'False alarms per image', a: 0.31, b: 0.27, better: 'down' } ] },
+    gaze: { name: 'label-read-v2.0', req: 'REQ-118', reqTitle: 'Hard-to-read shipping labels', specId: 'gaze', batches: ['B-2051', 'B-2052'],
+      run: 'lbl-vit-1015', runNote: 'Trained Oct 15 · logged in W&B', baseline: 'label-read-v1.3', specLabel: 'v2.0 · approved Sep 22',
+      evals: [ { m: 'Label read error rate, %', a: 4.8, b: 4.1, better: 'down' }, { m: 'Taped-over slice error, %', a: 7.9, b: 6.2, better: 'down' } ] }
+  };
+
+  const vendors = [
+    { id: 'mercor', active: 2, gold: 95.2, agree: 0.88, reject: 5.4, tat: 6.5, cpu: 1.65, flags: 1 },
+    { id: 'surge', active: 1, gold: 96.8, agree: 0.92, reject: 3.1, tat: 8.0, cpu: 1.52, flags: 0 },
+    { id: 'micro1', active: 2, gold: 91.4, agree: 0.82, reject: 12.3, tat: 4.0, cpu: 1.84, flags: 0 }
+  ];
+
+  const state = { view: 'board', vendor: 'all', spec: 'ped', diff: true, dataset: 'ped', nextReq: 131, batch: 'B-2042', gallery: 'all', showAllLog: false, tour: -1 };
+  const $ = (s) => document.querySelector(s);
+  const main = $('#main');
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const day = (s) => MONTHS[Number(s.slice(5, 7)) - 1] + ' ' + Number(s.slice(8));
+  const k = (n) => n >= 1000 ? '$' + (n / 1000).toFixed(1) + 'k' : '$' + n.toLocaleString('en-US');
+  const n0 = (n) => n.toLocaleString('en-US');
+  const usd = (n) => '$' + n.toFixed(2);
+  const byId = (id) => items.find((i) => i.id === id);
+  const vchip = (v) => v ? `<span class="vchip v-${v}"><span class="sw"></span>${V[v]}</span>` : `<span class="vchip"><span class="sw"></span>Unassigned</span>`;
+  const srcOf = (it) => it.srcType || 'human';
+  const srcCls = (it) => it.vendor ? 'v-' + it.vendor : SRC[srcOf(it)].cls;
+  const srcChip = (it) => it.vendor ? vchip(it.vendor) : srcOf(it) !== 'human' ? `<span class="vchip ${SRC[srcOf(it)].cls}"><span class="sw"></span>${esc(it.source)}</span>` : vchip(null);
+  const priPill = (p) => `<span class="pill ${p === 'High' ? 'bad' : p === 'Medium' ? 'warn' : 'neutral'}">${esc(p)}</span>`;
+
+  /* ---------- Board ---------- */
+  function card(it) {
+    if (it.kind === 'request') {
+      return `<button class="card" type="button" data-open="${it.id}">
+        <div class="card-top"><span class="mono muted">${it.id}</span>${priPill(it.priority)}</div>
+        <div class="card-title">${esc(it.title)}</div>
+        <div class="card-meta">Target: ${esc(it.evalName || 'Not set')}</div>
+        <div class="card-foot"><span>${esc(it.by)}</span><span>Needs spec</span></div></button>`;
+    }
+    const prog = it.stage === 'production' ? `<div class="bar ${srcCls(it)}"><i style="width:${it.progress}%"></i></div><div class="card-meta num">${it.progress}% · ${n0(it.delivered)} of ${n0(it.units)} ${it.unit}</div>` : '';
+    const qa = it.qa != null ? `<div><span class="pill ${it.qa >= 95 ? 'good' : it.qa >= 92 ? 'warn' : 'bad'}">QA pass ${it.qa}%</span></div>` : '';
+    const ag = it.stage === 'pilot' && it.agree ? `<div><span class="pill ${it.agree >= 0.85 ? 'good' : 'warn'}">Agreement ${it.agree.toFixed(2)}</span></div>` : '';
+    const fl = it.flag ? `<div class="flag ${it.flag.type}"><b>${it.flag.type}:</b> ${esc(it.flag.text)}</div>` : '';
+    const note = it.note ? `<div class="card-meta">${esc(it.note)}</div>` : '';
+    return `<button class="card" type="button" data-open="${it.id}">
+      <div class="card-top"><span class="mono muted">${it.id}</span>${srcChip(it)}</div>
+      <div class="card-title">${esc(it.title)}</div>
+      <div class="card-meta">${n0(it.units)} ${it.unit} · Spec ${esc(it.spec)}</div>
+      ${note}${prog}${qa}${ag}${fl}
+      ${batchDetail[it.id] ? '<div><span class="pill accent">Live tracking</span></div>' : ''}
+      <div class="card-foot"><span>Due ${day(it.due)}</span><span>${it.spend ? k(it.spend) : 'Not started'}</span></div></button>`;
+  }
+
+  function renderBoard() {
+    const batches = items.filter((i) => i.kind === 'batch');
+    const spend = batches.reduce((a, b) => a + b.spend, 0);
+    const delivered = batches.reduce((a, b) => a + (b.accepted || 0), 0);
+    const spendDelivered = batches.filter((b) => b.accepted).reduce((a, b) => a + b.spend, 0);
+    const flags = batches.filter((b) => b.flag).length;
+    const active = batches.filter((b) => ['pilot', 'production', 'qa'].includes(b.stage)).length;
+    const shown = items.filter((i) => state.vendor === 'all' || (i.kind === 'batch' && srcOf(i) === state.vendor));
+    const cols = STAGES.map(([key, label]) => {
+      const list = shown.filter((i) => i.stage === key);
+      return `<section class="col" aria-label="${label}"><div class="col-head">${label} <span>${list.length}</span></div>${list.map(card).join('')}</section>`;
+    }).join('');
+    const chips = [['all', 'All sources']].concat(SRC_ORDER.map((t) => [t, SRC[t].short])).map(([id, label]) =>
+      `<button class="chip ${id !== 'all' ? SRC[id].cls : ''}" type="button" data-vendor="${id}" aria-pressed="${state.vendor === id}">${id !== 'all' ? '<span class="sw"></span>' : ''}${label}</button>`).join('');
+    const activeTypes = new Set(batches.filter((b) => ['pilot', 'production', 'qa'].includes(b.stage)).map(srcOf)).size;
+    const flagTypes = {}; batches.filter((b) => b.flag).forEach((b) => { flagTypes[b.flag.type] = (flagTypes[b.flag.type] || 0) + 1; });
+    const flagTxt = Object.entries(flagTypes).map(([t, c]) => c + ' ' + t.toLowerCase()).join(' · ');
+    main.innerHTML = `
+      <div class="view-head"><div><h1>Program board</h1><div class="sub">Every request and batch for the fulfillment vision team, from every data source, intake to delivery.</div></div>
+        <div class="filters" role="group" aria-label="Filter by vendor">${chips}</div></div>
+      <div class="stats">
+        <div class="stat"><div class="k">Active batches</div><div class="v">${active} <small>across ${activeTypes} source types</small></div></div>
+        <div class="stat"><div class="k">Q4 spend</div><div class="v">${k(spend)} <small>of ${k(BUDGET)}</small></div><div class="meter"><i style="width:${Math.round(spend / BUDGET * 100)}%"></i></div></div>
+        <div class="stat"><div class="k">Cost per usable item</div><div class="v">${usd(spendDelivered / delivered)} <small>blended</small></div></div>
+        <div class="stat"><div class="k">Open flags</div><div class="v">${flags} <small>${flagTxt}</small></div></div>
+      </div>
+      <div class="board">${cols}</div>`;
+    $('#cnt-board').textContent = items.length;
+  }
+
+  /* ---------- Specs ---------- */
+  function rule(r) {
+    if (!state.diff) return r.s === 'removed' ? '' : `<li>${esc(r.t)}</li>`;
+    if (r.s === 'added') return `<li><span class="ins"><span class="tag">Added</span>${esc(r.t)}</span></li>`;
+    if (r.s === 'removed') return `<li><span class="del"><span class="tag">Removed</span>${esc(r.t)}</span></li>`;
+    if (r.s === 'changed') return `<li><span class="del">${esc(r.old)}</span><br><span class="ins"><span class="tag">Changed</span>${esc(r.t)}</span></li>`;
+    return `<li>${esc(r.t)}</li>`;
+  }
+  function renderSpecs() {
+    const sp = specs[state.spec];
+    const hasDiff = sp.sections.some((s) => s.rules.some((r) => r.s !== 'same'));
+    const list = Object.entries(specs).map(([id, s]) => `<button type="button" data-spec="${id}" aria-current="${id === state.spec}">${esc(s.name)}<span>${s.version} · ${s.status}</span></button>`).join('');
+    const quotas = sp.quotas.length ? `<div class="panel"><h2>Coverage quotas</h2><div class="tablewrap"><table>
+      <thead><tr><th>Group</th><th>Bucket</th><th class="r">Target</th><th class="r">Delivered</th><th>Progress vs target</th></tr></thead><tbody>
+      ${sp.quotas.map((q) => `<tr><td class="muted">${q.group}</td><td>${q.name}</td><td class="r">${q.target}%</td><td class="r">${q.now}%</td>
+        <td><div class="qbar"><i class="${q.now < q.target ? 'low' : ''}" style="width:${q.now}%"></i><b style="left:${q.target}%"></b></div></td></tr>`).join('')}
+      </tbody></table></div><div class="sub" style="margin-top:8px">Black tick marks the target share. Amber bars are below target.</div></div>` : '';
+    const comments = sp.comments.length ? sp.comments.map((c) => `<div class="comment"><span class="who">${esc(c.who)}</span> <span class="muted">· ${c.when}</span><div>${esc(c.text)}</div></div>`).join('') : '<div class="muted">No comments yet.</div>';
+    main.innerHTML = `
+      <div class="view-head"><div><h1>Specs</h1><div class="sub">Versioned labeling guidelines, rubrics and quotas. Every batch points to the exact version it used.</div></div></div>
+      <div class="grid-list">
+        <div class="list" role="list">${list}</div>
+        <div class="grid-2">
+          <div class="stack">
+            <div class="panel">
+              <div class="spec-head">
+                <div><h2 style="margin-bottom:4px">${esc(sp.name)} <span class="mono muted">${sp.version}</span></h2>
+                  <div class="sub">${sp.status === 'Approved' ? `<span class="pill good">Approved</span> by ${esc(sp.approver)}, ${sp.date}` : `<span class="pill accent">Draft</span> updated ${sp.date}${sp.approver ? ` · <button class="chip" type="button" data-approvespec="${esc(sp.approver)}" style="padding:1px 8px">Send to ${esc(sp.approver)} for approval</button>` : ''}`} · Used by ${sp.batches.map((b) => `<button class="chip" type="button" data-open="${b}" style="padding:1px 8px">${b}</button>`).join(' ')}</div></div>
+                ${hasDiff ? `<label class="toggle" for="diffToggle"><input type="checkbox" id="diffToggle" ${state.diff ? 'checked' : ''}>Show changes since ${sp.prev || 'last version'}</label>` : ''}
+              </div>
+              ${hasDiff && state.diff ? `<div class="legend" style="margin-top:10px"><span><span class="ins">Added or new text</span></span><span><span class="del">Removed or old text</span></span></div>` : ''}
+              ${sp.sections.map((s) => `<div class="rule-section"><h3>${esc(s.h)}</h3><ul class="rules">${s.rules.map(rule).join('')}</ul></div>`).join('')}
+            </div>
+            ${quotas}
+          </div>
+          <div class="stack">
+            <div class="panel"><h2>Version history</h2><ul class="timeline">${sp.versions.map((v, i) => `<li class="${i === 0 ? 'current' : ''}"><div><b>${v.v}</b> <span class="muted">· ${v.date}</span><div>${esc(v.note)}</div><div class="muted" style="font-size:12px">${esc(v.by)}</div></div></li>`).join('')}</ul></div>
+            <div class="panel"><h2>Discussion</h2>${comments}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /* ---------- Lineage & spend ---------- */
+  function renderDatasets() {
+    const ds = datasets[state.dataset];
+    const sp = specs[ds.specId];
+    const bs = ds.batches.map(byId);
+    const tot = bs.reduce((a, b) => ({ d: a.d + b.delivered, ac: a.ac + b.accepted, s: a.s + b.spend }), { d: 0, ac: 0, s: 0 });
+    const list = Object.entries(datasets).map(([id, d]) => `<button type="button" data-ds="${id}" aria-current="${id === state.dataset}"><span class="mono" style="color:var(--fg)">${d.name}</span><span>${d.batches.length} batches · run ${d.run}</span></button>`).join('');
+    const ev = ds.evals.map((e) => {
+      const d = e.b - e.a; const good = e.better === 'up' ? d > 0 : d < 0;
+      const prec = Math.abs(e.a) < 1 ? 3 : 1;
+      const dTxt = (d > 0 ? '+' : '−') + Math.abs(d).toFixed(prec);
+      return `<tr><td>${esc(e.m)}</td><td class="r">${e.a.toFixed(prec)}</td><td class="r">${e.b.toFixed(prec)}</td><td class="r"><span class="delta ${good ? 'up' : 'down'}">${dTxt}</span></td><td class="muted">${e.better === 'up' ? 'Higher is better' : 'Lower is better'}</td></tr>`;
+    }).join('');
+    const spendRows = bs.map((b) => {
+      const rej = (1 - b.accepted / b.delivered) * 100;
+      return `<tr><td><button class="brow" type="button" data-open="${b.id}" style="padding:0">${srcChip(b)} <span class="mono muted">${b.id}</span></button></td>
+        <td class="r">${n0(b.delivered)}</td><td class="r">${n0(b.accepted)}</td><td class="r"><span class="pill ${rej < 5 ? 'good' : rej < 10 ? 'warn' : 'bad'}">${rej.toFixed(1)}%</span></td>
+        <td class="r">${'$' + n0(b.spend)}</td><td class="r"><b>${usd(b.spend / b.accepted)}</b></td></tr>`;
+    }).join('');
+    main.innerHTML = `
+      <div class="view-head"><div><h1>Lineage &amp; spend</h1><div class="sub">Trace a dataset back to the request that started it, and forward to the eval it moved.</div></div></div>
+      <div class="grid-list">
+        <div class="list" role="list">${list}</div>
+        <div class="stack">
+          <div class="panel">
+            <h2>${ds.name}</h2>
+            <div class="chain">
+              <div class="node"><div class="kind">Request</div><div class="name">${esc(ds.reqTitle)}</div><div class="detail mono">${ds.req}</div></div>
+              <div class="arrow" aria-hidden="true"></div>
+              <button class="node" type="button" data-gospec="${ds.specId}" style="text-align:left;cursor:pointer"><div class="kind">Spec</div><div class="name">${esc(sp.name)}</div><div class="detail">${ds.specLabel || sp.version + ' · ' + sp.status.toLowerCase() + ' ' + sp.date}</div></button>
+              <div class="arrow" aria-hidden="true"></div>
+              <div class="node wide"><div class="kind">Vendor batches</div>${bs.map((b) => `<button class="brow" type="button" data-open="${b.id}">${srcChip(b)}<span class="num muted">${n0(b.accepted)} kept</span></button>`).join('')}</div>
+              <div class="arrow" aria-hidden="true"></div>
+              <div class="node"><div class="kind">QA gate</div><div class="name num">${n0(tot.ac)} of ${n0(tot.d)}</div><div class="detail">${((1 - tot.ac / tot.d) * 100).toFixed(1)}% rejected · gold set + review</div></div>
+              <div class="arrow" aria-hidden="true"></div>
+              <div class="node"><div class="kind">Training run</div><div class="name mono">${ds.run}</div><div class="detail">${ds.runNote}</div></div>
+              <div class="arrow" aria-hidden="true"></div>
+              <div class="node result"><div class="kind">Eval result</div><div class="name">${esc(ds.evals[0].m)}</div><div class="detail num">${ds.evals[0].a} → ${ds.evals[0].b}</div></div>
+            </div>
+          </div>
+          <div class="panel"><h2>Eval impact <span class="muted" style="font-weight:400">vs ${ds.baseline}</span></h2><div class="tablewrap"><table>
+            <thead><tr><th>Metric</th><th class="r">Before</th><th class="r">After</th><th class="r">Change</th><th></th></tr></thead><tbody>${ev}</tbody></table></div></div>
+          <div class="panel"><h2>Spend and yield by batch</h2><div class="tablewrap"><table>
+            <thead><tr><th>Batch</th><th class="r">Delivered</th><th class="r">Accepted</th><th class="r">Rejected</th><th class="r">Spend</th><th class="r">Cost per usable</th></tr></thead>
+            <tbody>${spendRows}<tr><td><b>Total</b></td><td class="r">${n0(tot.d)}</td><td class="r">${n0(tot.ac)}</td><td class="r">${((1 - tot.ac / tot.d) * 100).toFixed(1)}%</td><td class="r">${'$' + n0(tot.s)}</td><td class="r"><b>${usd(tot.s / tot.ac)}</b></td></tr></tbody></table></div>
+            <div class="sub" style="margin-top:8px">Cost per usable sample counts only items that passed QA, so rework shows up as a higher unit cost.</div></div>
+          <div class="soon"><div><h3>Contributor provenance</h3><div class="muted">Per-item contributor IDs, consent scope and identity checks across all vendors. Planned for v2.</div></div><span class="pill neutral">Coming in v2</span></div>
+        </div>
+      </div>`;
+  }
+
+  /* ---------- Vendors ---------- */
+  function renderVendors() {
+    const cards = vendors.map((v) => `<div class="panel vcard v-${v.id}"><div class="vname">${V[v.id]} ${v.flags ? '<span class="pill bad">1 integrity flag</span>' : '<span class="pill good">No flags</span>'}</div>
+      <dl class="kv"><dt>Active batches</dt><dd>${v.active}</dd><dt>Gold-set accuracy</dt><dd>${v.gold}%</dd><dt>Rater agreement</dt><dd>${v.agree.toFixed(2)}</dd>
+      <dt>Rejection rate</dt><dd>${v.reject}%</dd><dt>Median turnaround</dt><dd>${v.tat} days</dd><dt>Cost per usable sample</dt><dd>${usd(v.cpu)}</dd></dl></div>`).join('');
+    const metric = (title, key, fmt, max, note) => `<div class="cmp-block"><div class="cmp-title"><span>${title}</span><span class="muted" style="font-weight:400">${note}</span></div>
+      ${vendors.map((v) => `<div class="cmp v-${v.id}"><span>${V[v.id]}</span><div class="track"><i style="width:${Math.min(100, v[key] / max * 100)}%"></i></div><span class="num" style="text-align:right">${fmt(v[key])}</span></div>`).join('')}</div>`;
+    main.innerHTML = `
+      <div class="view-head"><div><h1>Vendors</h1><div class="sub">Every vendor is scored on the same gold set (GS-dock-500) and the same QA rules. Last 90 days.</div></div></div>
+      <div class="vgrid">${cards}</div>
+      <div class="panel"><h2>Side by side</h2>
+        ${metric('Gold-set accuracy', 'gold', (x) => x + '%', 100, 'Higher is better')}
+        ${metric('Rejection rate', 'reject', (x) => x + '%', 15, 'Lower is better')}
+        ${metric('Median turnaround', 'tat', (x) => x + ' days', 10, 'Lower is better')}
+        ${metric('Cost per usable sample', 'cpu', usd, 2, 'Lower is better')}
+      </div>`;
+  }
+
+  /* ---------- Batch page ---------- */
+  const batchDetail = {
+    'B-2042': {
+      start: '2026-10-09',
+      daily: [180, 260, 310, 290, 320, 340, 380, 410, 395, 420, 445, 430, 450, 330],
+      bucket: 's3://northgate-cv-intake/surge/b-2042/', lastSync: 'Oct 22, 9:42 AM',
+      quotas: [
+        { group: 'Package type', rows: [ { name: 'Corrugated box', now: 1690, target: 2400 }, { name: 'Poly mailer', now: 1820, target: 2800 }, { name: 'Shrink-wrapped', now: 1300, target: 2800 } ] },
+        { group: 'Conveyor zone', rows: [ { name: 'Induct', now: 2640, target: 4000 }, { name: 'Sort', now: 1620, target: 2800 }, { name: 'Outbound dock', now: 550, target: 1200 } ] },
+        { group: 'Site', rows: [ { name: 'Reno FC', now: 1920, target: 3200 }, { name: 'Dallas FC', now: 1610, target: 2400 }, { name: 'Atlanta FC', now: 1280, target: 2400 } ] }
+      ],
+      annotators: 46, reviewers: 6,
+      reasons: [ { r: 'Box too loose (IoU under 0.7)', p: 41 }, { r: 'Missed second damage area', p: 33 }, { r: 'Severity off by 2 or more', p: 26 } ],
+      samples: [
+        { id: 'img_04812', type: 'shrink', zone: 'Sort', sev: 3, site: 'Reno', ok: true, p: [28, 22, 104, 66], d: [62, 44] },
+        { id: 'img_04790', type: 'box', zone: 'Induct', sev: 2, site: 'Dallas', ok: true, p: [38, 18, 86, 74], d: [48, 58] },
+        { id: 'img_04771', type: 'mailer', zone: 'Outbound dock', sev: 4, site: 'Atlanta', ok: false, reason: 'Box too loose (IoU 0.52)', loose: true, p: [24, 30, 112, 52], d: [90, 48] },
+        { id: 'img_04755', type: 'box', zone: 'Sort', sev: 1, site: 'Reno', ok: true, p: [44, 24, 72, 62], d: [78, 34] },
+        { id: 'img_04731', type: 'shrink', zone: 'Induct', sev: 5, site: 'Dallas', ok: false, reason: 'Missed a second tear', second: [100, 70], p: [26, 20, 110, 72], d: [46, 36] },
+        { id: 'img_04702', type: 'mailer', zone: 'Induct', sev: 2, site: 'Reno', ok: true, p: [30, 26, 100, 58], d: [56, 52] },
+        { id: 'img_04688', type: 'box', zone: 'Outbound dock', sev: 3, site: 'Atlanta', ok: false, reason: 'Severity off by 2 (rated 1, gold 3)', p: [34, 16, 92, 78], d: [86, 64] },
+        { id: 'img_04650', type: 'shrink', zone: 'Sort', sev: 2, site: 'Atlanta', ok: true, p: [36, 24, 90, 64], d: [72, 40] }
+      ]
+    }
+  };
+  const TYPE = { box: 'Corrugated box', mailer: 'Poly mailer', shrink: 'Shrink-wrapped' };
+  const addDays = (iso, n) => new Date(Date.parse(iso + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+  const diffDays = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
+
+  function throughputChart(days, need) {
+    const W = 640, H = 230, L = 44, R = 12, T = 14, B = 30, pw = W - L - R, ph = H - T - B, max = 500;
+    const n = days.length, step = pw / n, bw = step * 0.62;
+    const y = (v) => T + ph - (v / max) * ph;
+    const grid = [0, 100, 200, 300, 400, 500].map((v) => `<line class="g" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join('');
+    const bars = days.map((d, i) => `<rect class="${i === n - 1 ? 'partial' : 'bar'}" x="${(L + i * step + (step - bw) / 2).toFixed(1)}" y="${y(d.n).toFixed(1)}" width="${bw.toFixed(1)}" height="${(T + ph - y(d.n)).toFixed(1)}" rx="2"><title>${day(d.date)}: ${d.n} images</title></rect>`).join('');
+    const labels = days.map((d, i) => (i % 2 === 0 || i === n - 1) ? `<text x="${(L + i * step + step / 2).toFixed(1)}" y="${H - 10}" text-anchor="middle">${i === n - 1 ? 'Today' : day(d.date)}</text>` : '').join('');
+    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Images delivered per day against the pace needed">${grid}${bars}<line class="need" x1="${L}" x2="${W - R}" y1="${y(need)}" y2="${y(need)}"/>${labels}</svg>`;
+  }
+
+  function thumb(s) {
+    const [x, y, w, h] = s.p, [dx, dy] = s.d;
+    let pkg;
+    if (s.type === 'box') pkg = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="var(--pkg-box)"/><rect x="${x}" y="${y + h / 2 - 3}" width="${w}" height="6" fill="var(--fg)" fill-opacity=".12"/>`;
+    else if (s.type === 'mailer') pkg = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="var(--pkg-mailer)"/><rect x="${x + 10}" y="${y + 8}" width="28" height="16" rx="2" fill="var(--surface)"/>`;
+    else pkg = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="5" fill="var(--pkg-shrink)"/><path d="M${x + 12} ${y + 8} l14 ${h - 16} M${x + 30} ${y + 8} l10 ${h - 24}" stroke="#ffffff" stroke-opacity=".5" stroke-width="2" fill="none"/>`;
+    const dmg = (a, b) => `<path d="M${a} ${b} l7 6 l6 -5 l8 8" stroke="var(--fg)" stroke-opacity=".6" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+    const col = s.ok ? 'var(--accent)' : 'var(--bad)';
+    const box = s.loose ? `<rect x="${dx - 22}" y="${dy - 20}" width="62" height="44" fill="none" stroke="${col}" stroke-width="1.5" stroke-dasharray="4 3"/>` : `<rect x="${dx - 6}" y="${dy - 8}" width="33" height="22" fill="none" stroke="${col}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+    const lines = [20, 45, 70, 95].map((ly) => `<line x1="0" x2="160" y1="${ly}" y2="${ly}" stroke="var(--line)"/>`).join('');
+    return `<svg viewBox="0 0 160 110" role="img" aria-label="${TYPE[s.type]} sample, ${s.ok ? 'accepted' : 'rejected'}"><rect width="160" height="110" fill="var(--surface-2)"/>${lines}${pkg}${dmg(dx, dy)}${s.second ? dmg(s.second[0], s.second[1]) : ''}${box}</svg>`;
+  }
+
+  function renderBatch() {
+    const it = byId(state.batch), d = batchDetail[state.batch];
+    if (!it || !d) { state.batch = 'B-2042'; return renderBatch(); }
+    const sp = specs[it.specId];
+    const days = d.daily.map((n, i) => ({ date: addDays(d.start, i), n }));
+    const lastDay = days[days.length - 1].date;
+    const remaining = it.units - it.delivered;
+    const need = Math.ceil(remaining / diffDays(lastDay, it.due));
+    const pace = days.slice(-7).reduce((a, b) => a + b.n, 0) / 7;
+    const finish = addDays(lastDay, Math.ceil(remaining / pace));
+    const early = diffDays(finish, it.due);
+    const overall = Math.round(it.accepted / it.units * 100);
+    const rejTotal = it.delivered - it.accepted;
+    const rejs = days.map((x) => Math.round(x.n * rejTotal / it.delivered));
+    rejs[0] += rejTotal - rejs.reduce((a, b) => a + b, 0);
+    const log = days.map((x, i) => ({ date: x.date, n: x.n, rej: rejs[i], src: i % 4 === 2 ? 'Manifest (CSV)' : 'S3 bucket' })).reverse();
+    const s3 = log.filter((r) => r.src === 'S3 bucket').length, csv = log.length - s3;
+    const shown = state.showAllLog ? log : log.slice(0, 6);
+    const qhtml = d.quotas.map((g) => `<div class="qgroup"><h3>${g.group}</h3>${g.rows.map((q) => {
+      const pct = Math.round(q.now / q.target * 100); const low = pct < overall - 8;
+      return `<div class="qrow v-${it.vendor}"><span>${q.name}</span><div class="qtrack"><i class="${low ? 'low' : ''}" style="width:${pct}%"></i></div><span class="num muted" style="text-align:right">${n0(q.now)} / ${n0(q.target)}</span><span class="pill ${low ? 'warn' : 'neutral'}">${pct}%</span></div>`;
+    }).join('')}</div>`).join('');
+    const samples = d.samples.filter((s) => state.gallery === 'all' || (state.gallery === 'ok' ? s.ok : !s.ok));
+    const gchips = [['all', 'All'], ['ok', 'Accepted'], ['rej', 'Rejected']].map(([id, l]) => `<button class="chip" type="button" data-gfilter="${id}" aria-pressed="${state.gallery === id}">${l}</button>`).join('');
+    main.innerHTML = `
+      <button class="back" type="button" data-back="board">← Program board</button>
+      <div class="view-head"><div>
+        <div class="mono muted">${it.id}</div>
+        <h1>${esc(it.title)}</h1>
+        <div class="sub" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px">${vchip(it.vendor)}<span class="pill neutral">In production</span><span>Spec <button class="chip" type="button" data-gospec="${it.specId}" style="padding:1px 8px">${esc(sp.name)} ${sp.version}</button></span><span>Due ${day(it.due)}</span></div>
+      </div></div>
+      <div class="stats five">
+        <div class="stat"><div class="k">Delivered</div><div class="v">${n0(it.delivered)} <small>of ${n0(it.units)}</small></div><div class="meter"><i style="width:${it.progress}%"></i></div></div>
+        <div class="stat"><div class="k">Accepted after QA</div><div class="v">${n0(it.accepted)} <small>${(it.accepted / it.delivered * 100).toFixed(1)}%</small></div></div>
+        <div class="stat"><div class="k">Pace, last 7 days</div><div class="v">${Math.round(pace)}<small>/day · need ${need}</small></div></div>
+        <div class="stat"><div class="k">Projected finish</div><div class="v">${day(finish)} <small>${early > 0 ? early + ' days early' : Math.abs(early) + ' days late'}</small></div></div>
+        <div class="stat"><div class="k">Spend to date</div><div class="v">${k(it.spend)} <small>${usd(it.spend / it.accepted)} per usable</small></div></div>
+      </div>
+      <div class="grid-2">
+        <div class="stack">
+          <div class="panel v-${it.vendor}"><h2>Daily throughput</h2>
+            <div class="chart-legend"><span><i class="lg-bar"></i>Images delivered per day</span><span><i class="lg-line"></i>Pace needed to finish by ${day(it.due)}: ${need}/day</span><span>Today is a partial day</span></div>
+            <div class="chartwrap">${throughputChart(days, need)}</div></div>
+          <div class="panel"><h2>Coverage inside this batch</h2><div class="sub" style="margin:-4px 0 12px">Accepted images against this batch's targets. Overall the batch is ${overall}% complete; amber rows are falling behind.</div>${qhtml}</div>
+          <div class="panel"><div class="spec-head" style="margin-bottom:12px"><h2 style="margin:0">Sample from latest deliveries</h2><div class="filters">${gchips}</div></div>
+            <div class="gallery">${samples.map((s) => `<div class="tile">${thumb(s)}<div class="cap"><span class="mono">${s.id}</span><span class="muted">${TYPE[s.type]} · ${s.zone}</span><span class="muted">Severity ${s.sev} · ${s.site} FC</span><span>${s.ok ? '<span class="pill good">Accepted</span>' : '<span class="pill bad">Rejected</span>'}</span>${s.ok ? '' : `<span class="rej">${esc(s.reason)}</span>`}</div></div>`).join('') || '<div class="muted">No samples match this filter.</div>'}</div>
+            <div class="sub" style="margin-top:10px">Drawings stand in for real images in this prototype. Dashed boxes are the vendor's labels.</div></div>
+          <div class="panel"><h2>Delivery log</h2><div class="tablewrap"><table>
+            <thead><tr><th>Date</th><th>Source</th><th class="r">Images</th><th class="r">Accepted</th><th class="r">Rejected</th></tr></thead>
+            <tbody>${shown.map((r) => `<tr><td>${day(r.date)}${r.date === lastDay ? ' <span class="muted">(so far)</span>' : ''}</td><td>${r.src}</td><td class="r">${n0(r.n)}</td><td class="r">${n0(r.n - r.rej)}</td><td class="r">${r.rej}</td></tr>`).join('')}</tbody></table></div>
+            <button class="btn" type="button" data-showlog style="margin-top:10px">${state.showAllLog ? 'Show recent only' : 'Show all ' + log.length + ' deliveries'}</button></div>
+        </div>
+        <div class="stack">
+          <div class="panel"><h2>Where these numbers come from</h2>
+            <div class="src"><b>S3 bucket</b><code>${d.bucket}</code><span class="muted">${s3} deliveries · last sync ${d.lastSync}</span></div>
+            <div class="src"><b>Manifest uploads (CSV)</b><span class="muted">${csv} uploads from Surge's project lead</span></div>
+            <div class="src"><b>QA results</b><span class="muted">Gold-set checks (5% of every delivery) plus a 5% reviewer sample</span></div>
+            <div class="sub" style="margin-top:8px">Progress counts images that land in the bucket and match the spec's label schema.</div></div>
+          <div class="panel"><h2>Needs attention</h2>
+            <div class="issue warn"><b>Shrink-wrapped is behind.</b> 46% of target vs ${overall}% overall. Ask Surge to prioritize shrink-wrap images from Reno.</div>
+            <div class="issue warn"><b>Outbound dock is behind.</b> 550 of 1,200 images. Dallas and Atlanta have sent very few dock images.</div>
+            <div class="issue good"><b>On pace.</b> Projected to finish ${day(finish)}, ${early} days before the due date.</div></div>
+          <div class="panel"><h2>People and rejections</h2>
+            <dl class="kv" style="margin-top:0"><dt>Annotators this week</dt><dd>${d.annotators}</dd><dt>Reviewers</dt><dd>${d.reviewers}</dd><dt>Images per annotator per day</dt><dd>${Math.round(pace / d.annotators)}</dd></dl>
+            <h3 style="margin-top:14px">Top rejection reasons</h3>
+            ${d.reasons.map((r) => `<div class="reason"><span>${r.r}</span><span class="num" style="text-align:right">${r.p}%</span><div class="qtrack"><i style="width:${r.p}%"></i></div></div>`).join('')}</div>
+        </div>
+      </div>`;
+  }
+
+  /* ---------- Data sources ---------- */
+  function srcStats(t) {
+    const bs = items.filter((i) => i.kind === 'batch' && srcOf(i) === t);
+    const spend = bs.reduce((a, b) => a + b.spend, 0), del = bs.reduce((a, b) => a + (b.delivered || 0), 0), acc = bs.reduce((a, b) => a + (b.accepted || 0), 0);
+    return { bs, spend, del, acc, cpu: acc ? spend / acc : null, active: bs.filter((b) => ['spec', 'pilot', 'production', 'qa'].includes(b.stage)).length };
+  }
+  function renderSources() {
+    const layer = (name, desc, comps, ours) => `<div class="layer ${ours ? 'ours' : ''}"><div><div class="lname">${name}</div><div class="ldesc">${desc}</div></div><div class="comps">${comps.map((c) => `<span class="comp">${c}</span>`).join('')}</div></div>`;
+    const srcLayer = `<div class="layer"><div><div class="lname">Sources</div><div class="ldesc">Every way Northgate gets training data</div></div><div class="comps">${SRC_ORDER.map((t) => `<button class="chip ${SRC[t].cls}" type="button" data-srctype="${t}"><span class="sw"></span>${SRC[t].name}</button>`).join('')}</div></div>`;
+    const cards = SRC_ORDER.map((t) => { const d = SRC[t], st = srcStats(t);
+      return `<button class="srccard ${d.cls}" type="button" data-srctype="${t}"><span class="sname">${d.name}<span class="pill ${d.status === 'Connected' ? 'good' : 'neutral'}">${d.status}</span></span><span class="what">${d.what}</span>
+        <dl class="kv"><dt>Active work</dt><dd>${st.active}</dd><dt>Q4 spend</dt><dd>${st.spend ? k(st.spend) : '$0'}</dd><dt>Usable ${d.unit}</dt><dd>${st.acc ? n0(st.acc) : '—'}</dd><dt>Cost per usable</dt><dd>${st.cpu ? usd(st.cpu) : '—'}</dd></dl>
+        <span class="what"><b style="color:var(--fg);font-weight:500">Best for:</b> ${d.best}</span></button>`; }).join('');
+    const rows = SRC_ORDER.map((t) => { const d = SRC[t], st = srcStats(t);
+      return `<tr><td><button class="capname ${d.cls}" type="button" data-srctype="${t}" style="--c:var(--v)"><span class="sw"></span>${d.name}</button></td><td>${d.check}</td><td>${d.rights}</td><td>${d.connector}</td><td class="r">${st.cpu ? usd(st.cpu) : '—'}</td></tr>`; }).join('');
+    main.innerHTML = `
+      <div class="view-head"><div><h1>Data sources</h1><div class="sub">Human, expert, synthetic, environments, internal workflows, beta users and licensed sets in one registry. Every source passes the same quality, rights and cost checks before it can train a model.</div></div></div>
+      <div class="stack">
+        <div class="panel"><h2>How it fits together</h2><div class="sub" style="margin:-4px 0 14px">Sources feed in at the bottom. The control plane checks, routes and gates them. Leaders see the result at the top.</div>
+          <div class="layers">
+            ${layer('Management', 'What leaders see', ['Data portfolio', 'Return by source type', 'Audit pack per model', 'Vendor and source benchmarks'], true)}
+            ${layer('Control', 'Decides what data to get, from where, and whether it can train', ['Specs and rubrics', 'Sourcing planner (mix across sources)', 'Routing to vendors and teams', 'Training gate', 'Budget approvals'], true)}
+            ${layer('Quality and trust', 'Checks matched to each source type', ['Gold sets and rater agreement', 'Realism scoring (synthetic)', 'Reward-hacking tests (environments)', 'PII redaction (workflows)', 'Supervisor confirmation (beta)', 'Dedupe against owned data', 'Consent and rights ledger', 'Contributor fraud checks'], true)}
+            ${layer('Ingestion', 'How data arrives', ['Delivery bucket watch', 'Vendor APIs and manifests', 'Sim pipeline hook', 'Environment run logs', 'Returns, claims and WMS connectors', 'Beta app feedback', 'Licensed set import'], true)}
+            ${srcLayer}
+          </div></div>
+        <div><h2 style="margin-bottom:10px">Source registry</h2><div class="srcgrid">${cards}</div></div>
+        <div class="panel"><h2>Checks and rights by source</h2><div class="tablewrap"><table><thead><tr><th>Source type</th><th>Quality check</th><th>Rights and consent</th><th>How it connects</th><th class="r">Cost per usable</th></tr></thead><tbody>${rows}</tbody></table></div>
+          <div class="sub" style="margin-top:8px">Cost per usable counts only items that passed the source’s checks. For RL environments the unit is a working task.</div></div>
+      </div>`;
+  }
+  function openSrc(t) {
+    const d = SRC[t], st = srcStats(t);
+    $('#drawer').innerHTML = `<div class="drawer-head"><div><div class="muted">Source type</div><h2 style="margin:2px 0 0">${d.name}</h2></div><button class="x" type="button" id="closeDrawer" aria-label="Close">×</button></div>
+      <div class="muted">${d.what}</div>
+      <div class="panel" style="padding:12px 14px"><dl class="kv" style="margin-top:0"><dt>Connected sources</dt><dd>${d.sources.length}</dd><dt>Q4 spend</dt><dd>${st.spend ? '$' + n0(st.spend) : '$0'}</dd><dt>Delivered</dt><dd>${st.del ? n0(st.del) + ' ' + d.unit : '—'}</dd><dt>Usable after checks</dt><dd>${st.acc ? n0(st.acc) : '—'}</dd><dt>Cost per usable</dt><dd>${st.cpu ? usd(st.cpu) : '—'}</dd></dl></div>
+      <div><div class="section-label">Sources</div><ul class="rules">${d.sources.map((x) => `<li>${x}</li>`).join('')}</ul></div>
+      <div><div class="section-label">Quality check</div><div>${d.check}</div></div>
+      <div><div class="section-label">Rights and consent</div><div>${d.rights}</div></div>
+      <div><div class="section-label">Work in this source</div>${st.bs.length ? st.bs.map((b) => `<button class="brow" type="button" data-open="${b.id}">${srcChip(b)}<span class="num muted">${b.id} · ${b.spend ? k(b.spend) : 'not started'}</span></button>`).join('') : '<div class="muted">Nothing running this quarter.</div>'}</div>`;
+    $('#drawer').hidden = false; $('#scrim').hidden = false; $('#closeDrawer').focus();
+  }
+
+  /* ---------- Data portfolio ---------- */
+  const portfolio = [
+    { id: 'ped', cls: 'cap-a', name: 'Package damage detection', short: 'Package damage', metric: 'Damage-Det recall@0.5', before: 81.2, after: 88.6, better: 'up', range: [6.1, 8.6], trend: 'Still climbing', rec: 'Invest more', recCls: 'good', diag: 'Still climbing', note: '', value: 28000, run: 'dmg-r50-1023', rounds: [2.9, 2.4] },
+    { id: 'glare', cls: 'cap-b', name: 'Pick verification', short: 'Pick verification', metric: 'Pick accuracy', before: 97.1, after: 98.4, better: 'up', range: [0.8, 1.8], trend: 'Steady', rec: 'Hold', recCls: 'neutral', diag: 'Steady returns', note: '', value: 35000, run: 'pick-cnn-1019', rounds: [1.1, 1.0] },
+    { id: 'gaze', cls: 'cap-c', name: 'Shipping label legibility', short: 'Label legibility', metric: 'Label read error rate', before: 4.8, after: 4.1, better: 'down', range: [0.4, 1.0], trend: 'Flattening overall', rec: 'Refine the spec', recCls: 'warn', diag: 'Wrong data mix', note: 'Hazmat floor not met', value: 41000, run: 'lbl-vit-1015', rounds: [0.62, 0.26] },
+    { id: 'ho', cls: 'cap-d', name: 'Robotic picking', short: 'Robotic picking', metric: 'Grasp success (no baseline yet)', before: null, after: null, better: 'up', range: null, trend: 'No data yet', rec: 'Pilot first', recCls: 'neutral', diag: 'No baseline yet', note: '', value: null, run: null, rounds: [] }
+  ];
+  function capStats(c) {
+    const spend = items.filter((i) => i.kind === 'batch' && i.specId === c.id).reduce((a, b) => a + b.spend, 0);
+    const gain = c.before == null ? null : Math.abs(c.after - c.before);
+    const per = spend && gain ? gain / spend * 10000 : null;
+    return { spend, gain, per, cpp: spend && gain ? spend / gain : null };
+  }
+  function returnsChart() {
+    const W = 600, H = 230, L = 40, R = 150, T = 16, B = 30, pw = W - L - R, ph = H - T - B, max = 3;
+    const qs = ['Q2', 'Q3', 'Q4'];
+    const x = (i) => L + i * pw / (qs.length - 1), y = (v) => T + ph - v / max * ph;
+    const grid = [0, 1, 2, 3].map((v) => `<line class="g" x1="${L}" x2="${L + pw}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join('');
+    const xl = qs.map((q, i) => `<text x="${x(i)}" y="${H - 10}" text-anchor="middle">${q === 'Q4' ? 'Q4 (now)' : q}</text>`).join('');
+    const series = portfolio.filter((c) => c.rounds.length).map((c) => {
+      const vals = c.rounds.concat([capStats(c).per]);
+      const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+      const lastV = vals[vals.length - 1];
+      return `<g class="${c.cls}"><polyline points="${pts}" fill="none" stroke="var(--c)" stroke-width="2.25"/>${vals.map((v, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === vals.length - 1 ? 4.5 : 3}" fill="var(--c)"><title>${c.short}, ${qs[i]}: ${v.toFixed(2)} pts per $10K</title></circle>`).join('')}
+        <text class="end" x="${(x(2) + 10).toFixed(1)}" y="${(y(lastV) + 4).toFixed(1)}">${c.short} ${lastV.toFixed(2)}</text></g>`;
+    }).join('');
+    return `<svg class="rchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Eval points gained per $10K by quarter">${grid}${series}${xl}</svg>`;
+  }
+  function renderPortfolio() {
+    const rows = portfolio.map((c) => ({ c, s: capStats(c) }));
+    const total = rows.reduce((a, r) => a + r.s.spend, 0);
+    const ranked = rows.filter((r) => r.s.per).sort((a, b) => b.s.per - a.s.per);
+    const best = ranked[0], worst = ranked[ranked.length - 1];
+    const maxPer = best.s.per;
+    const table = rows.map(({ c, s }) => `<tr>
+      <td><button class="capname ${c.cls}" type="button" data-cap="${c.id}"><span class="sw"></span>${c.name}</button><div class="muted" style="font-size:12px;margin-left:16px">${c.metric}</div></td>
+      <td class="r">${s.spend ? k(s.spend) : '—'}</td>
+      <td class="r">${s.gain != null ? `<span class="delta up">${c.better === 'up' ? '+' : '−'}${s.gain.toFixed(1)}</span>` : '—'}</td>
+      <td>${s.per ? `<div class="ptrack ${c.cls}"><div><i style="width:${s.per / maxPer * 100}%"></i></div><span class="num">${s.per.toFixed(2)}</span></div>` : '<span class="muted">Not measured</span>'}</td>
+      <td class="r">${c.value ? k(c.value) : '—'}</td>
+      <td>${c.diag}${c.note ? `<div><span class="pill bad" style="margin-top:3px">${c.note}</span></div>` : ''}</td>
+      <td><span class="pill ${c.recCls}">${c.rec}</span></td></tr>`).join('');
+    const checks = [
+      ['Wrong data mix', 'Likely', 'warn', '55% of read errors come from taped-over and curved labels, which are only 7% of training data.'],
+      ['Label quality', 'Ruled out', 'good', 'Rater agreement was 0.93 on the last two batches. Relabeling would not help.'],
+      ['Eval problem', 'Ruled out', 'good', 'The eval’s error mix matches 2,400 real misreads from WMS scan exceptions within 5 points.'],
+      ['Model bottleneck', 'Unlikely', 'good', 'Error on taped-over labels still fell 1.7 points when that data was added. The model can still learn here.'],
+      ['Saturation', 'Only clean flat labels', 'neutral', 'Error on clean flat labels is 0.6%. More of them buys almost nothing.']
+    ];
+    const slices = [
+      ['Taped-over labels', 31, 4, 'Still dropping'], ['Curved or wrapped, under glare', 24, 3, 'Still dropping'], ['Torn or folded', 12, 6, 'Slowing'],
+      ['Handwritten corrections', 8, 1, 'Too few examples to tell (180)'], ['Clean flat labels', 9, 71, 'Flat'], ['Other', 16, 15, 'Slowing']
+    ];
+    main.innerHTML = `
+      <div class="view-head"><div><h1>Data portfolio</h1><div class="sub">What each model capability got for its training data spend this quarter, why, and what to do next.</div></div>
+        <button class="btn tourbtn" type="button" data-tour>Walk me through it</button></div>
+      <div class="stats" id="pf-kpis">
+        <div class="stat"><div class="k">Q4 data spend</div><div class="v">${k(total)} <small>across ${rows.filter((r) => r.s.spend).length} capabilities</small></div></div>
+        <div class="stat"><div class="k">Budget left this quarter</div><div class="v">${k(BUDGET - total)} <small>of ${k(BUDGET)}</small></div></div>
+        <div class="stat"><div class="k">Best return</div><div class="v">${best.s.per.toFixed(2)} <small>pts per $10K · ${best.c.short}</small></div></div>
+        <div class="stat"><div class="k">Needs a spec change</div><div class="v">1 <small>Label legibility</small></div></div>
+      </div>
+      <div class="stack">
+        <div class="rec" id="pf-rec">
+          <div class="spec-head"><h2>Recommendation for the next $20K</h2><span class="pill accent">Needs approval</span></div>
+          <div class="move">
+            <div class="side"><div class="k">$12K to</div><div class="v">Package damage</div><div class="k">Shrink-wrap and cold-chain slices. Projected +1.1 to +1.8 pts recall.</div></div>
+            <div class="arrowbig" aria-hidden="true">+</div>
+            <div class="side"><div class="k">$8K to</div><div class="v">Label legibility, under spec v2.1</div><div class="k">Taped-over and curved labels. Projected +0.6 to +1.1 pts, vs +0.1 to +0.2 under v2.0.</div></div>
+          </div>
+          <div class="muted">Label legibility looked like the place to cut. The diagnosis below shows the data mix was wrong, not that the capability is finished. Each point of read error also costs more than a point of damage recall.</div>
+          <div class="actions" style="justify-content:flex-start"><button class="btn primary" type="button" data-draftbudget>Draft budget change</button><button class="btn" type="button" data-gospec="gaze">Review draft spec v2.1</button></div>
+        </div>
+        <div class="panel" id="pf-table"><h2>Portfolio by capability</h2><div class="tablewrap"><table>
+          <thead><tr><th>Capability</th><th class="r">Q4 spend</th><th class="r">Change</th><th>Points per $10K</th><th class="r">Value per point, per quarter</th><th>Diagnosis</th><th>Next step</th></tr></thead>
+          <tbody>${table}</tbody></table></div>
+          <div class="sub" style="margin-top:8px">Change is in percentage points on each capability's main eval, counted in the improving direction. Value per point is the estimated quarterly cost of one point of error: returns, mis-sorts and manual rescans. Click a capability to see the batches and runs behind it.</div></div>
+        <div class="panel" id="pf-chart"><h2>Returns by quarter</h2><div class="sub" style="margin:-4px 0 10px">Eval points gained per $10K of data, per quarter. A falling line means each round buys less, but not always that you should stop.</div>
+          <div class="chartwrap">${returnsChart()}</div></div>
+        <div class="panel" id="pf-diagnose">
+          <div class="spec-head"><div><h2 style="margin:0">Why label legibility flattened</h2><div class="sub">Returns fell from 0.62 to 0.17 points per $10K. Before recommending a cut, five possible causes are checked.</div></div><span class="pill warn">Refine the spec</span></div>
+          <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Possible cause</th><th>Verdict</th><th>Evidence</th></tr></thead>
+            <tbody>${checks.map((r) => `<tr><td>${r[0]}</td><td><span class="pill ${r[2]}">${r[1]}</span></td><td class="muted">${r[3]}</td></tr>`).join('')}</tbody></table></div>
+          <h3 style="margin-top:18px">Where the errors are vs. where the data is</h3>
+          <div class="tablewrap"><table><thead><tr><th>Label condition</th><th>Share of read errors</th><th>Share of training data</th><th>When data is added</th></tr></thead>
+            <tbody>${slices.map((r) => `<tr><td>${r[0]}</td>
+              <td><div class="ptrack cap-c" style="--c:var(--bad)"><div><i style="width:${r[1] / 31 * 100}%"></i></div><span class="num">${r[1]}%</span></div></td>
+              <td><div class="ptrack cap-a"><div><i style="width:${r[2] / 71 * 100}%"></i></div><span class="num">${r[2]}%</span></div></td>
+              <td class="${r[3] === 'Still dropping' ? '' : 'muted'}">${r[3]}</td></tr>`).join('')}</tbody></table></div>
+          <div class="issue warn" style="margin-top:14px"><b>Business stakes:</b> each point of read error costs about $41K a quarter in mis-sorts and manual rescans. Hazmat marks also have a compliance floor of 98% read accuracy by Jan 31. Today it is 96.8%.</div>
+          <div class="sub" style="margin-top:10px">Curved-label share is estimated by an auto-tagger, because v2.0 didn’t record label surface. The draft v2.1 adds that field so this can be measured directly.</div>
+          <div class="actions" style="justify-content:flex-start;margin-top:12px"><button class="btn primary" type="button" data-gospec="gaze">Review draft spec v2.1</button><button class="btn" type="button" data-approvespec="Marco Díaz">Send to Marco Díaz for approval</button></div>
+        </div>
+        <div class="panel" id="pf-sources"><h2>Package damage: return by source type</h2><div class="sub" style="margin:-4px 0 12px">The +7.4 point gain split by where the data came from, measured by leaving each source out of a training run.</div>
+          <div class="tablewrap"><table><thead><tr><th>Source type</th><th class="r">Q4 spend</th><th class="r">Usable items</th><th class="r">Eval gain</th><th>Points per $10K</th><th>What we learned</th></tr></thead><tbody>${srcRows()}</tbody></table></div></div>
+        <div class="rec" style="background:var(--surface)"><div class="spec-head"><h2>Also: don’t renew the carrier imagery license</h2><span class="pill warn">Renewal due Jan 15</span></div>
+          <div class="muted">The licensed set cost $18K and added 0.4 points, mostly because 57% of it duplicated data Northgate already owns. The same money in the returns-photo pipeline and beta flags is projected to add 3 to 5 points.</div>
+          <div class="actions" style="justify-content:flex-start"><button class="btn" type="button" data-srctype="licensed">See the licensed source</button></div></div>
+        <div class="soon" id="pf-method"><div><h3>How these numbers are measured</h3><div class="muted">Each capability's change comes from ablation runs: the same model trained with and without this quarter's batches, scored on a fixed eval set. Ranges are 80% intervals across three seeds. Slice analysis uses spec attributes recorded on every item, plus real failures from returns, WMS scan exceptions and beta flags. Runs are pulled from W&amp;B, and spend comes from the program board.</div></div><span class="pill neutral">Method</span></div>
+      </div>`;
+  }
+  const SRC_GAIN = { human: [4.5, 'Most of the gain; precise labels at volume'], synthetic: [0.9, 'Cheap; gains flatten past about 20K renders'], enterprise: [1.2, 'Best value per dollar; only about 2K matching photos a month'], beta: [0.4, 'Hard cases the model misses; small volume'], licensed: [0.4, 'Mostly duplicates of data already owned'] };
+  function srcRows() {
+    const rows = Object.keys(SRC_GAIN).map((t) => { const bs = items.filter((i) => i.kind === 'batch' && i.specId === 'ped' && srcOf(i) === t);
+      const spend = bs.reduce((a, b) => a + b.spend, 0), acc = bs.reduce((a, b) => a + (b.accepted || 0), 0), g = SRC_GAIN[t][0];
+      return { t, spend, acc, g, per: spend ? g / spend * 10000 : 0 }; });
+    const max = Math.max(...rows.map((r) => r.per));
+    return rows.sort((a, b) => b.per - a.per).map((r) => `<tr><td><button class="capname ${SRC[r.t].cls}" type="button" data-srctype="${r.t}" style="--c:var(--v)"><span class="sw"></span>${SRC[r.t].name}</button></td>
+      <td class="r">${k(r.spend)}</td><td class="r">${n0(r.acc)}</td><td class="r"><span class="delta up">+${r.g.toFixed(1)}</span></td>
+      <td><div class="ptrack ${SRC[r.t].cls}" style="--c:var(--v)"><div><i style="width:${r.per / max * 100}%"></i></div><span class="num">${r.per.toFixed(2)}</span></div></td><td class="muted">${SRC_GAIN[r.t][1]}</td></tr>`).join('');
+  }
+  function openCap(id) {
+    const c = portfolio.find((p) => p.id === id); const s = capStats(c);
+    const bs = items.filter((i) => i.kind === 'batch' && i.specId === id);
+    $('#drawer').innerHTML = `<div class="drawer-head"><div><div class="muted">Capability</div><h2 style="margin:2px 0 0">${c.name}</h2></div><button class="x" type="button" id="closeDrawer" aria-label="Close">×</button></div>
+      <div><span class="pill ${c.recCls}">${c.rec}</span> <span class="muted">· ${c.trend}</span></div>
+      <div class="panel" style="padding:12px 14px"><dl class="kv" style="margin-top:0"><dt>Main eval</dt><dd>${c.metric}</dd>
+        <dt>Before → after</dt><dd>${c.before != null ? c.before + ' → ' + c.after : '—'}</dd><dt>Q4 spend</dt><dd>${s.spend ? '$' + n0(s.spend) : '—'}</dd>
+        <dt>Points per $10K</dt><dd>${s.per ? s.per.toFixed(2) : '—'}</dd><dt>Cost per eval point</dt><dd>${s.cpp ? '$' + n0(Math.round(s.cpp)) : '—'}</dd></dl></div>
+      <div><div class="section-label">Evidence</div>${c.run ? `<div>Ablation: <span class="mono">${c.run}</span> trained with vs. without Q4 batches.</div><div class="muted">Change ${c.better === 'up' ? '+' : '−'}${s.gain.toFixed(1)} pts, 80% range ${c.range[0]} to ${c.range[1]} across 3 seeds.</div>` : '<div class="muted">No runs yet. Proposed: an $8K pilot batch and one ablation run to measure returns before committing the planned $45K.</div>'}</div>
+      <div><div class="section-label">Batches behind this number</div>${bs.map((b) => `<button class="brow" type="button" data-open="${b.id}">${srcChip(b)}<span class="num muted">${b.id} · ${b.spend ? '$' + n0(b.spend) : 'not started'}</span></button>`).join('')}</div>`;
+    $('#drawer').hidden = false; $('#scrim').hidden = false; $('#closeDrawer').focus();
+  }
+
+  /* ---------- Launch flow: request → spec → vendor plan → pilot → launch ---------- */
+  const VEND = ['mercor', 'surge', 'micro1'];
+  const LAUNCH_DAY = '2026-10-28';
+  const VH = {
+    mercor: { cap: 500, quote: 1.60, q: 93.8, rej: 5.4, ramp: 2, pid: 'MRC-55821' },
+    surge: { cap: 350, quote: 1.95, q: 96.1, rej: 3.1, ramp: 3, pid: 'SRG-20417' },
+    micro1: { cap: 650, quote: 1.25, q: 88.0, rej: 12.3, ramp: 1, pid: 'M1-7730' }
+  };
+  const PILOT = { mercor: { gold: 94.9, agree: 0.88, rej: 4.8 }, surge: { gold: 96.3, agree: 0.92, rej: 2.6 }, micro1: { gold: 89.2, agree: 0.81, rej: 11.5 } };
+  const STEPS = ['Request', 'Spec', 'Vendor plan', 'Pilot', 'Launch'];
+  const eff = (v) => VH[v].quote / (1 - VH[v].rej / 100);
+
+  const effSpec = (L) => L.blend ? Object.assign({}, L.spec, { units: L.spec.units - 1500 }) : L.spec;
+  function newLaunch(id) {
+    const r = byId(id);
+    return { reqId: id, title: r.title, by: r.by, evalName: r.evalName, priority: r.priority, why: r.why, step: 1, choice: 'rec', alloc: null, sent: {}, launched: false, blend: false,
+      spec: { name: r.title + ' v1.0', units: 12000, due: '2026-11-20', budget: 23000, floor: 94.5, agree: 0.85, mix: { box: 30, mailer: 35, shrink: 35 } } };
+  }
+  function metrics(a, sp) {
+    const per = VEND.map((v) => {
+      const units = Math.round(sp.units * a[v] / 100);
+      return { v, share: a[v], units, days: units ? VH[v].ramp + Math.ceil(units / VH[v].cap) : 0, cost: units * eff(v) };
+    });
+    const days = Math.max(...per.map((p) => p.days));
+    return { a, per, days, finish: addDays(LAUNCH_DAY, days), cost: per.reduce((s, p) => s + p.cost, 0),
+      q: VEND.reduce((s, v) => s + a[v] * VH[v].q, 0) / 100, rej: VEND.reduce((s, v) => s + a[v] * VH[v].rej, 0) / 100 };
+  }
+  function planOptions(sp) {
+    const maxDays = diffDays(LAUNCH_DAY, sp.due) - 3;
+    const all = [];
+    for (let m = 0; m <= 100; m += 5) for (let s = 0; s <= 100 - m; s += 5) {
+      const a = { mercor: m, surge: s, micro1: 100 - m - s };
+      if (VEND.some((v) => a[v] > 0 && a[v] < 10)) continue;
+      all.push(metrics(a, sp));
+    }
+    const pick = (arr, f) => arr.slice().sort(f)[0];
+    const onTime = all.filter((p) => p.days <= maxDays);
+    const good = onTime.filter((p) => p.q >= sp.floor);
+    const pool = onTime.length ? onTime : all;
+    return {
+      maxDays,
+      rec: pick(good.filter((p) => p.cost <= sp.budget), (x, y) => x.cost - y.cost || x.days - y.days) || pick(good, (x, y) => x.cost - y.cost) || pick(pool, (x, y) => y.q - x.q),
+      fast: pick(all, (x, y) => x.days - y.days || y.q - x.q),
+      qual: pick(pool, (x, y) => y.q - x.q || x.cost - y.cost),
+      cheap: pick(pool, (x, y) => x.cost - y.cost || y.q - x.q)
+    };
+  }
+  const splitBar = (a) => `<div class="split">${VEND.filter((v) => a[v]).map((v) => `<i class="v-${v}" style="width:${a[v]}%"></i>`).join('')}</div>`;
+  const splitKey = (a) => `<div class="splitkey">${VEND.filter((v) => a[v]).map((v) => `<span class="vchip v-${v}"><span class="sw"></span>${V[v]} ${a[v]}%</span>`).join('')}</div>`;
+
+  function whyLines(p, sp) {
+    const out = [];
+    VEND.forEach((v) => {
+      const h = VH[v], s = p.a[v];
+      if (v === 'surge') out.push(s ? `<b>Surge ${s}%:</b> most accurate on similar low-light damage work (${h.q}%), but only about ${h.cap} images a day free, so its share is capped to finish on time.` : `<b>Surge left out:</b> highest cost per usable image ($${eff(v).toFixed(2)}).`);
+      if (v === 'mercor') out.push(s ? `<b>Mercor ${s}%:</b> ${h.q}% on similar work and ${h.cap} images a day free. Takes the volume Surge can't finish before the deadline.` : `<b>Mercor left out</b> of this plan.`);
+      if (v === 'micro1') out.push(s ? `<b>Micro1 ${s}%:</b> lowest cost per usable image ($${eff(v).toFixed(2)}) and the most capacity, but ${h.q}% on similar work${h.q < sp.floor ? `, below your ${sp.floor}% floor` : ''}.` : `<b>Micro1 left out:</b> ${h.q}% accuracy on similar work is below your ${sp.floor}% floor, even though it's the cheapest.`);
+    });
+    return out;
+  }
+  function currentPlan(L, opts) {
+    if (L.choice === 'custom' && L.alloc) return metrics(L.alloc, effSpec(L));
+    return opts[L.choice] || opts.rec;
+  }
+
+  function renderLaunch() {
+    if (!state.launch) { const r = items.find((i) => i.kind === 'request'); if (!r) { location.hash = 'board'; return go('board'); } state.launch = newLaunch(r.id); }
+    const L = state.launch, sp = L.spec;
+    const stepper = `<nav class="stepper" aria-label="Launch steps">${STEPS.map((s, i) => {
+      const cls = i < L.step ? 'done' : i === L.step ? 'cur' : '';
+      return `<button class="st ${cls}" type="button" ${i < L.step && !L.launched ? `data-lstep="${i}"` : 'disabled'} aria-current="${i === L.step ? 'step' : 'false'}"><span class="n">${i < L.step ? '✓' : i + 1}</span>${s}</button>`;
+    }).join('')}</nav>`;
+    let body = '';
+
+    if (L.step === 0) {
+      body = `<div class="panel"><h2>${esc(L.title)}</h2><dl class="kv" style="max-width:520px"><dt>Requested by</dt><dd>${esc(L.by)}</dd><dt>Priority</dt><dd>${esc(L.priority)}</dd><dt>Target eval</dt><dd>${esc(L.evalName || 'Not set')}</dd></dl>
+        <p class="muted" style="margin:12px 0">${esc(L.why || 'No reason given.')}</p><button class="btn primary" type="button" data-lnext="tospec">Continue to spec</button></div>`;
+    }
+
+    if (L.step === 1) {
+      body = `<div class="grid-2"><div class="panel"><h2>Draft spec</h2><div class="sub" style="margin:-4px 0 14px">Starts from Package damage v3.2. Change what this project needs, then approve.</div>
+        <form id="specForm" style="gap:16px">
+          <label for="s-name">Spec name<input type="text" id="s-name" value="${esc(sp.name)}"></label>
+          <div class="form-grid">
+            <label for="s-units">Usable images needed<input type="number" id="s-units" min="1000" max="50000" step="500" value="${sp.units}"></label>
+            <label for="s-due">Due date<input type="date" id="s-due" min="2026-11-05" value="${sp.due}"></label>
+            <label for="s-budget">Budget cap, $<input type="number" id="s-budget" min="1000" step="500" value="${sp.budget}"></label>
+            <label for="s-floor">Minimum gold-set accuracy, %<input type="number" id="s-floor" min="80" max="99" step="0.5" value="${sp.floor}"></label>
+            <label for="s-agree">Minimum rater agreement<input type="number" id="s-agree" min="0.5" max="1" step="0.01" value="${sp.agree}"></label>
+          </div>
+          <div><div class="section-label">Labels</div><div class="checks">
+            <label for="l1"><input type="checkbox" id="l1" checked>Damage boxes</label><label for="l2"><input type="checkbox" id="l2" checked>Severity 1–5</label>
+            <label for="l3"><input type="checkbox" id="l3" checked>Package type</label><label for="l4"><input type="checkbox" id="l4" checked>Conveyor zone</label>
+            <label for="l5"><input type="checkbox" id="l5" checked>Light level (lux bucket)</label></div></div>
+          <div><div class="section-label">Coverage targets</div><div class="form-grid">
+            <label for="m1">Corrugated box, %<input type="number" id="m1" min="0" max="100" value="${sp.mix.box}"></label>
+            <label for="m2">Poly mailer, %<input type="number" id="m2" min="0" max="100" value="${sp.mix.mailer}"></label>
+            <label for="m3">Shrink-wrapped, %<input type="number" id="m3" min="0" max="100" value="${sp.mix.shrink}"></label></div>
+            <div class="sub" style="margin-top:6px">All images from outbound docks under 50 lux, across Reno, Dallas and Atlanta.</div></div>
+          <div id="specErr" class="flag Quality" hidden></div>
+          <div class="actions" style="justify-content:flex-start"><button class="btn primary" type="submit">Approve spec and plan vendors</button></div>
+        </form></div>
+        <div class="stack"><div class="panel"><h2>From the request</h2><div class="card-title">${esc(L.title)}</div><div class="sub">${esc(L.by)} · ${esc(L.priority)} priority</div><p style="margin:10px 0 0">${esc(L.why || '')}</p></div>
+          <div class="panel"><h2>Inherited rules</h2><ul class="rules"><li>12 px minimum damage size</li><li>1–5 severity scale tied to the returns policy</li><li>5% gold images from GS-dock-500 in every delivery</li></ul></div></div></div>`;
+    }
+
+    if (L.step === 2) {
+      const opts = planOptions(effSpec(L));
+      const p = currentPlan(L, opts);
+      const card = (key, name, tag) => { const o = opts[key]; return `<button class="plan" type="button" data-plan="${key}" aria-pressed="${L.choice === key}">
+        <span class="pname">${name}${tag ? `<span class="pill accent">${tag}</span>` : ''}</span>${splitBar(o.a)}${splitKey(o.a)}
+        <span class="pm">Done ${day(o.finish)} · ${k(Math.round(o.cost))} · ${o.q.toFixed(1)}% accuracy</span></button>`; };
+      const extra = L.blend ? 465 : 0;
+      const finishOk = p.days <= opts.maxDays, costOk = p.cost + extra <= sp.budget, qOk = p.q >= sp.floor;
+      const sum = L.alloc ? VEND.reduce((s, v) => s + (Number(L.alloc[v]) || 0), 0) : 100;
+      const base = VEND.map((v) => `<tr><td>${vchip(v)}</td><td class="r">${VH[v].cap}/day</td><td class="r">${usd(VH[v].quote)}</td><td class="r">${VH[v].rej}%</td><td class="r">${usd(eff(v))}</td><td class="r">${VH[v].q}%</td><td class="r">${VH[v].ramp} days</td></tr>`).join('');
+      const per = p.per.filter((x) => x.share).map((x) => `<tr><td>${vchip(x.v)}</td><td class="r">${x.share}%</td><td class="r">${n0(x.units)}</td><td class="r">${day(addDays(LAUNCH_DAY, x.days))}</td><td class="r">${k(Math.round(x.cost))}</td></tr>`).join('');
+      body = `<div class="stack">
+        <div class="panel"><div class="spec-head"><div><h2 style="margin:0">Recommended vendor split</h2><div class="sub">${L.blend ? n0(sp.units - 1500) + ' images from vendors (1,500 from returns photos)' : n0(sp.units) + ' usable images'} by ${day(sp.due)}, at least ${sp.floor}% accuracy, under ${k(sp.budget)}. Final QA needs 3 days, so work must finish by ${day(addDays(LAUNCH_DAY, opts.maxDays))}.</div></div></div>
+          <div class="plans" style="margin-top:14px">${card('rec', 'Recommended', 'Best fit')}${card('fast', 'Fastest')}${card('qual', 'Highest accuracy')}${card('cheap', 'Lowest cost')}</div></div>
+        <div class="grid-2">
+          <div class="stack">
+            <div class="panel"><h2>${L.choice === 'custom' ? 'Your custom split' : 'Selected plan'}</h2>${splitBar(p.a)}<div style="margin:8px 0 14px">${splitKey(p.a)}</div>
+              <div class="goals">
+                <div class="goal"><div class="k">Finish date</div><div class="v">${day(p.finish)}</div><span class="pill ${finishOk ? 'good' : 'bad'}">${finishOk ? 'Leaves time for final QA' : 'Misses the deadline'}</span></div>
+                <div class="goal"><div class="k">Estimated cost</div><div class="v">${k(Math.round(p.cost + extra))}</div><span class="pill ${costOk ? 'good' : 'bad'}">${costOk ? 'Under ' + k(sp.budget) + ' cap' : 'Over budget'}</span></div>
+                <div class="goal"><div class="k">Predicted accuracy</div><div class="v">${p.q.toFixed(1)}%</div><span class="pill ${qOk ? 'good' : 'bad'}">${qOk ? 'Meets ' + sp.floor + '% floor' : 'Below ' + sp.floor + '% floor'}</span></div>
+              </div>
+              <div class="tablewrap" style="margin-top:14px"><table><thead><tr><th>Vendor</th><th class="r">Share</th><th class="r">Images</th><th class="r">Done by</th><th class="r">Est. cost</th></tr></thead><tbody>${per}</tbody></table></div></div>
+            <div class="panel"><h2>Adjust the split</h2><div class="adjust">${VEND.map((v) => `<label for="al-${v}" class="v-${v}"><span class="vchip"><span class="sw"></span>${V[v]}</span><input type="number" id="al-${v}" min="0" max="100" step="5" value="${p.a[v]}">%</label>`).join('')}</div>
+              ${sum !== 100 ? `<div class="flag Quality" style="margin-top:10px">Shares add up to ${sum}%. They need to total 100%.</div>` : '<div class="sub" style="margin-top:8px">Change any share and the dates, cost and accuracy update.</div>'}</div>
+            <div class="panel"><h2>What the plan is based on</h2><div class="tablewrap"><table><thead><tr><th>Vendor</th><th class="r">Free capacity</th><th class="r">Quoted rate</th><th class="r">Past rejection</th><th class="r">Cost per usable</th><th class="r">Accuracy, similar work</th><th class="r">Can start in</th></tr></thead><tbody>${base}</tbody></table></div>
+              <div class="sub" style="margin-top:8px">Capacity accounts for each vendor's current Northgate batches. Accuracy is gold-set results on past package-damage work in low light. Cost per usable image adds expected rework to the quoted rate.</div></div>
+          </div>
+          <div class="stack"><div class="panel"><h2>Use your own data first</h2>
+              <p class="muted" style="margin:0 0 10px">Other sources can cover part of this project before you pay vendors.</p>
+              <ul class="rules" style="margin-bottom:12px"><li><b>Returns and damage claims:</b> 1,500 matching low-light photos available now. About $0.15 each to redact. Replaces vendor images.</li><li><b>Northgate SimLab:</b> 3,000 synthetic low-light renders for rare cases, about $0.08 each. Extra coverage, not counted toward the real-image target.</li><li><b>Reno beta site:</b> associates already flag low-light misses. Routed to this project automatically.</li></ul>
+              <label class="toggle" for="blendToggle"><input type="checkbox" id="blendToggle" ${L.blend ? 'checked' : ''}>Use returns photos and synthetic renders (+$465)</label></div>
+            <div class="panel"><h2>Why this split</h2><ul class="why">${whyLines(p, sp).map((l) => `<li>${l}</li>`).join('')}</ul></div>
+            <div class="panel"><h2>Next: pilot</h2><p class="muted" style="margin:0 0 12px">Each vendor in the plan labels 200 images from the spec before the full launch. Pilot cost: ${k(Math.round(p.per.filter((x) => x.share).reduce((s, x) => s + 200 * VH[x.v].quote, 0)))}.</p>
+              <button class="btn primary" type="button" data-lnext="pilot" ${sum !== 100 ? 'disabled' : ''}>Run 200-image pilot</button></div></div>
+        </div></div>`;
+    }
+
+    if (L.step === 3) {
+      const p = L.final;
+      const rows = p.per.filter((x) => x.share).map((x) => {
+        const r = PILOT[x.v], pass = r.gold >= sp.floor && r.agree >= sp.agree;
+        return { v: x.v, pass, html: `<tr><td>${vchip(x.v)}</td><td class="r">200</td><td class="r">${r.gold}%</td><td class="r">${r.agree.toFixed(2)}</td><td class="r">${r.rej}%</td><td><span class="pill ${pass ? 'good' : 'bad'}">${pass ? 'Passed' : 'Below target'}</span></td></tr>` };
+      });
+      const failed = rows.filter((r) => !r.pass).map((r) => V[r.v]);
+      body = `<div class="grid-2"><div class="stack">
+        <div class="panel"><h2>Pilot results</h2><div class="sub" style="margin:-4px 0 12px">200 images per vendor, Oct 24–27, scored against GS-dock-500. Targets: ${sp.floor}% gold accuracy, ${sp.agree} agreement.</div>
+          <div class="tablewrap"><table><thead><tr><th>Vendor</th><th class="r">Images</th><th class="r">Gold accuracy</th><th class="r">Agreement</th><th class="r">Rejected</th><th>Result</th></tr></thead><tbody>${rows.map((r) => r.html).join('')}</tbody></table></div></div>
+        ${failed.length ? `<div class="issue warn"><b>${failed.join(' and ')} missed the pilot targets.</b> Re-plan without ${failed.join(' and ')} before launching, or launch anyway and watch their batches closely.</div>` : `<div class="issue good"><b>All vendors passed.</b> The plan is ready to launch as is.</div>`}
+      </div><div class="stack"><div class="panel"><h2>Plan going into launch</h2>${splitBar(p.a)}<div style="margin:8px 0 12px">${splitKey(p.a)}</div>
+        <dl class="kv" style="margin-top:0"><dt>Finish</dt><dd>${day(p.finish)}</dd><dt>Estimated cost</dt><dd>${k(Math.round(p.cost))}</dd><dt>Predicted accuracy</dt><dd>${p.q.toFixed(1)}%</dd></dl>
+        <div class="actions" style="justify-content:flex-start;margin-top:14px;flex-wrap:wrap">${failed.length ? '<button class="btn primary" type="button" data-replan>Re-plan without them</button><button class="btn" type="button" data-lnext="launch">Launch anyway</button>' : '<button class="btn primary" type="button" data-lnext="launch">Approve pilot and prepare launch</button>'}</div></div></div></div>`;
+    }
+
+    if (L.step === 4) {
+      const p = L.final;
+      const live = p.per.filter((x) => x.share);
+      const status = (v) => L.sent[v] === 'sent' ? `<span class="pill good">Sent · project ${VH[v].pid} created</span>` : L.sent[v] === 'sending' ? '<span class="pill warn">Sending…</span>' : '<span class="pill neutral">Ready</span>';
+      const allSent = live.every((x) => L.sent[x.v] === 'sent');
+      body = `<div class="grid-2"><div class="stack"><div class="panel"><h2>Intake packets</h2><div class="sub" style="margin:-4px 0 12px">One packet per vendor, built from the approved spec and plan.</div>
+        <div class="sendlist">${live.map((x) => `<div class="packet"><div><div>${vchip(x.v)} <b style="margin-left:6px">${n0(x.units)} images</b> <span class="muted">· ${x.share}% of project</span></div>
+          <div class="pmeta">Spec ${esc(sp.name)} · due ${day(addDays(LAUNCH_DAY, x.days))} · ${usd(VH[x.v].quote)} per image · deliver to s3://northgate-cv-intake/${x.v}/</div>
+          <div class="pmeta">QA: 5% gold from GS-dock-500, ${sp.floor}% accuracy, ${sp.agree} agreement · images and consent records attached</div></div>${status(x.v)}</div>`).join('')}${L.blend ? `<div class="packet"><div><div><span class="vchip s-ent"><span class="sw"></span>Returns and damage claims</span> <b style="margin-left:6px">1,500 images</b> <span class="muted">· internal</span></div><div class="pmeta">Pull matching low-light claim photos, redact faces and addresses, label severity from claim outcome</div></div>${Object.keys(L.sent).length ? '<span class="pill good">Queued</span>' : '<span class="pill neutral">Ready</span>'}</div>
+          <div class="packet"><div><div><span class="vchip s-syn"><span class="sw"></span>Northgate SimLab</span> <b style="margin-left:6px">3,000 renders</b> <span class="muted">· internal</span></div><div class="pmeta">Low-light dock scenes, shrink-wrap and poly mailers, realism score 0.85 or higher</div></div>${Object.keys(L.sent).length ? '<span class="pill good">Queued</span>' : '<span class="pill neutral">Ready</span>'}</div>` : ''}</div>
+        <div class="actions" style="justify-content:flex-start;margin-top:14px">${L.launched ? '<button class="btn primary" type="button" data-back="board">View on program board</button>' : `<button class="btn primary" type="button" data-send ${Object.keys(L.sent).length ? 'disabled' : ''}>Send to vendor portals</button>`}</div>
+        <div class="simnote" style="margin-top:10px">Simulated in this prototype. In the product, packets go through each vendor's API or intake form, and progress syncs back from the delivery bucket.</div></div></div>
+        <div class="stack"><div class="panel"><h2>Launch summary</h2>${splitBar(p.a)}<div style="margin:8px 0 12px">${splitKey(p.a)}</div>
+          <dl class="kv" style="margin-top:0"><dt>Total images</dt><dd>${n0(sp.units)}</dd><dt>Production starts</dt><dd>${day(LAUNCH_DAY)}</dd><dt>Projected finish</dt><dd>${day(p.finish)}</dd><dt>Due</dt><dd>${day(sp.due)}</dd><dt>Estimated cost</dt><dd>${k(Math.round(p.cost))}</dd></dl>
+          ${allSent ? '<div class="issue good" style="margin-top:12px"><b>Launched.</b> New batches are on the program board under In production.</div>' : ''}</div></div></div>`;
+    }
+
+    main.innerHTML = `<button class="back" type="button" data-back="board">← Program board</button>
+      <div class="view-head"><div><div class="mono muted">${L.reqId}</div><h1>${esc(L.title)}</h1><div class="sub">From request to vendors in one flow.</div></div></div>${stepper}${body}`;
+    const f = $('#specForm');
+    if (f) f.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const units = Number($('#s-units').value), due = $('#s-due').value, mix = [Number($('#m1').value), Number($('#m2').value), Number($('#m3').value)];
+      const err = $('#specErr');
+      const problem = units < 1000 ? 'Volume needs to be at least 1,000 images.' : (!due || diffDays(LAUNCH_DAY, due) < 8) ? 'Pick a due date on or after Nov 5 so vendors have time after the pilot.' : mix.reduce((a, b) => a + b, 0) !== 100 ? 'Coverage targets need to add up to 100%.' : '';
+      if (problem) { err.textContent = problem; err.hidden = false; return; }
+      Object.assign(L.spec, { name: $('#s-name').value.trim() || L.spec.name, units, due, budget: Number($('#s-budget').value), floor: Number($('#s-floor').value), agree: Number($('#s-agree').value), mix: { box: mix[0], mailer: mix[1], shrink: mix[2] } });
+      L.step = 2; L.choice = 'rec'; L.alloc = null; renderLaunch(); window.scrollTo(0, 0); toast('Spec approved');
+    });
+  }
+  function launchSend() {
+    const L = state.launch, live = L.final.per.filter((x) => x.share);
+    live.forEach((x, i) => {
+      setTimeout(() => { L.sent[x.v] = 'sending'; if (state.view === 'launch') renderLaunch(); }, i * 700);
+      setTimeout(() => {
+        L.sent[x.v] = 'sent';
+        if (live.every((y) => L.sent[y.v] === 'sent')) {
+          L.launched = true;
+          const idx = items.findIndex((it) => it.id === L.reqId); if (idx >= 0) items.splice(idx, 1);
+          if (L.blend) { items.push({ id: 'PRD-05', kind: 'batch', srcType: 'enterprise', source: 'Returns and damage claims', stage: 'production', title: L.title + ' (returns photos)', units: 1500, unit: 'images', spec: L.spec.name, specId: 'ped', req: L.reqId, due: addDays(LAUNCH_DAY, 5), spend: 0, progress: 0, delivered: 0, accepted: 0, note: 'Pulling from returns system' });
+            items.push({ id: 'SYN-032', kind: 'batch', srcType: 'synthetic', source: 'Northgate SimLab', stage: 'production', title: L.title + ' (synthetic renders)', units: 3000, unit: 'images', spec: L.spec.name, specId: 'ped', req: L.reqId, due: addDays(LAUNCH_DAY, 4), spend: 0, progress: 0, delivered: 0, accepted: 0, note: 'Render job queued' }); }
+          live.forEach((y, j) => items.push({ id: 'B-' + (2080 + j), kind: 'batch', stage: 'production', title: L.title, vendor: y.v, units: y.units, unit: 'images', spec: L.spec.name, specId: 'ped', req: L.reqId, due: addDays(LAUNCH_DAY, y.days), spend: 0, progress: 0, delivered: 0, accepted: 0, note: 'Launched ' + day(LAUNCH_DAY) + ' · ' + VH[y.v].pid }));
+          toast('Sent to ' + live.map((y) => V[y.v]).join(' and ') + '. Project launched.');
+        }
+        if (state.view === 'launch') renderLaunch();
+      }, i * 700 + 650);
+    });
+  }
+
+  /* ---------- Walkthrough ---------- */
+  const TOUR = [
+    { sel: '#pf-kpis', title: 'Start with the question leaders get asked', text: 'What did our data spend buy? This view counts every source: vendors, synthetic, RL environments, licensed sets and Northgate’s own workflows.' },
+    { sel: '#pf-table', title: 'Capabilities, not vendor batches', text: 'Each row is something the model needs to do well: what it cost, what it gained, what a point is worth to the business, and a diagnosis.' },
+    { sel: '#pf-chart', title: 'Flattening returns', text: 'Label legibility buys less with every round, from 0.62 to 0.17 points per $10K. The obvious move is to cut it.' },
+    { sel: '#pf-diagnose', title: 'Diagnose before cutting', text: 'The product checks five causes. Here the data mix is wrong: most errors are taped-over and curved labels, which are a tiny share of the data. So the fix is a better spec, not less budget.' },
+    { sel: '#pf-rec', title: 'Turn it into a decision', text: 'The next $20K splits between package damage and label legibility under the new spec. Projections are ranges, because attribution is uncertain.' },
+    { sel: '#pf-sources', title: 'Same capability, different sources', text: 'For package damage, returns photos from Northgate’s own claims bought the most improvement per dollar. The licensed carrier set bought the least.' },
+    { sel: '#pf-method', title: 'Every number has a source', text: 'Changes come from ablation runs the team already does. Slices come from spec fields on every item. Click any capability to see the evidence.' }
+  ];
+
+  function tourStep() {
+    document.querySelectorAll('.tour-on').forEach((el) => el.classList.remove('tour-on'));
+    const s = TOUR[state.tour]; const el = document.querySelector(s.sel);
+    if (el) { el.classList.add('tour-on'); el.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }
+    const last = state.tour === TOUR.length - 1;
+    $('#tourcard').innerHTML = `<div class="step">Step ${state.tour + 1} of ${TOUR.length}</div><h3>${s.title}</h3><p>${s.text}</p>
+      <div class="actions"><button class="btn" type="button" data-tournav="end">Skip</button>${state.tour ? '<button class="btn" type="button" data-tournav="back">Back</button>' : ''}<button class="btn primary" type="button" data-tournav="${last ? 'end' : 'next'}">${last ? 'Done' : 'Next'}</button></div>`;
+    $('#tourcard').hidden = false;
+    $('#tourcard').querySelector('.btn.primary').focus({ preventScroll: true });
+  }
+  function startTour() { if (state.view !== 'portfolio') { location.hash = 'portfolio'; go('portfolio'); } state.tour = 0; tourStep(); }
+  function endTour() { document.querySelectorAll('.tour-on').forEach((el) => el.classList.remove('tour-on')); $('#tourcard').hidden = true; state.tour = -1; }
+
+  /* ---------- Drawer ---------- */
+  function openDrawer(id) {
+    const it = byId(id); if (!it) return;
+    let body;
+    if (it.kind === 'request') {
+      body = `<div><div class="section-label">Request</div><div>${priPill(it.priority)} <span class="muted">from ${esc(it.by)}</span></div></div>
+        <div><div class="section-label">Target eval</div><div>${esc(it.evalName || 'Not set')}</div></div>
+        <div><div class="section-label">Why now</div><div>${esc(it.why || 'No reason given yet.')}</div></div>
+        <div><div class="section-label">Next step</div><div class="muted">Draft a spec, get a recommended vendor split, run a pilot, then launch to vendor portals.</div></div>
+        <div class="actions" style="justify-content:flex-start"><button class="btn primary" type="button" data-advance="${it.id}">Start a spec</button></div>`;
+    } else {
+      const ds = it.dataset ? datasets[it.dataset] : null;
+      const rej = it.delivered ? ((1 - it.accepted / it.delivered) * 100).toFixed(1) + '%' : '—';
+      body = `<div>${srcChip(it)} <span class="pill neutral" style="margin-left:6px">${SRC[srcOf(it)].name}</span> <span class="pill neutral">${STAGES.find((s) => s[0] === it.stage)[1]}</span></div>
+        ${it.flag ? `<div class="flag ${it.flag.type}"><b>${it.flag.type} flag:</b> ${esc(it.flag.text)}</div>` : ''}
+        <div class="panel" style="padding:12px 14px"><dl class="kv" style="margin-top:0">
+          <dt>Volume</dt><dd>${n0(it.units)} ${it.unit}</dd><dt>Progress</dt><dd>${it.progress}%</dd>
+          <dt>Delivered</dt><dd>${it.delivered ? n0(it.delivered) : '—'}</dd><dt>Accepted after QA</dt><dd>${it.accepted ? n0(it.accepted) : '—'}</dd>
+          <dt>Rejected</dt><dd>${rej}</dd><dt>Rater agreement</dt><dd>${it.agree ? it.agree.toFixed(2) : '—'}</dd>
+          <dt>QA pass rate</dt><dd>${it.qa != null ? it.qa + '%' : '—'}</dd><dt>Spend to date</dt><dd>${it.spend ? '$' + n0(it.spend) : '—'}</dd>
+          <dt>Cost per usable</dt><dd>${it.accepted ? usd(it.spend / it.accepted) : '—'}</dd><dt>Due</dt><dd>${day(it.due)}</dd></dl></div>
+        <div><div class="section-label">Lineage</div>
+          <div>Request <span class="mono">${it.req}</span> → Spec <button class="chip" type="button" data-gospec="${it.specId}" style="padding:1px 8px">${esc(it.spec)}</button>${ds ? ` → Dataset <button class="chip" type="button" data-gods="${it.dataset}" style="padding:1px 8px">${ds.name}</button>` : ''}</div></div>
+        ${it.note ? `<div><div class="section-label">Status</div><div>${esc(it.note)}</div></div>` : ''}
+        ${batchDetail[it.id] ? `<div class="actions" style="justify-content:flex-start"><button class="btn primary" type="button" data-batchpage="${it.id}">Open batch page</button></div>` : ''}`;
+    }
+    $('#drawer').innerHTML = `<div class="drawer-head"><div><div class="mono muted">${it.id}</div><h2 style="margin:2px 0 0">${esc(it.title)}</h2></div>
+      <button class="x" type="button" id="closeDrawer" aria-label="Close">×</button></div>${body}`;
+    $('#drawer').hidden = false; $('#scrim').hidden = false;
+    $('#closeDrawer').focus();
+  }
+  function closeAll() { $('#drawer').hidden = true; $('#modal').hidden = true; $('#scrim').hidden = true; }
+
+  function toast(msg) {
+    const t = $('#toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2600);
+  }
+
+  /* ---------- Routing ---------- */
+  const VIEWS = { sources: renderSources, portfolio: renderPortfolio, board: renderBoard, specs: renderSpecs, datasets: renderDatasets, vendors: renderVendors, batch: renderBatch, launch: renderLaunch };
+  function go(view) {
+    if (!VIEWS[view]) view = 'board';
+    if (state.tour >= 0 && view !== 'portfolio') endTour();
+    state.view = view;
+    document.querySelectorAll('.nav').forEach((a) => a.setAttribute('aria-current', a.dataset.view === view ? 'page' : 'false'));
+    VIEWS[view]();
+  }
+  window.addEventListener('hashchange', () => go(location.hash.slice(1)));
+
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-open],[data-vendor],[data-spec],[data-ds],[data-gospec],[data-gods],[data-advance],[data-batchpage],[data-gfilter],[data-showlog],[data-back],[data-cap],[data-tour],[data-tournav],[data-draftbudget],[data-lstep],[data-lnext],[data-plan],[data-replan],[data-send],[data-srctype],[data-approvespec],#closeDrawer,#scrim,#cancelReq,#newReqBtn,.nav');
+    if (!t) return;
+    if (t.dataset.approvespec) return toast('Sent to ' + t.dataset.approvespec + ' for approval');
+    if (t.dataset.srctype) { if (state.tour >= 0) endTour(); return openSrc(t.dataset.srctype); }
+    if (t.hasAttribute('data-tour')) return startTour();
+    if (t.dataset.tournav) { const a = t.dataset.tournav; if (a === 'end') return endTour(); state.tour += a === 'next' ? 1 : -1; return tourStep(); }
+    if (t.dataset.cap) { if (state.tour >= 0) endTour(); return openCap(t.dataset.cap); }
+    if (t.hasAttribute('data-draftbudget')) return toast('Budget change drafted and sent to Priya Nair for approval');
+    if (t.dataset.batchpage) { closeAll(); state.batch = t.dataset.batchpage; location.hash = 'batch'; go('batch'); window.scrollTo(0, 0); return; }
+    if (t.dataset.gfilter) { state.gallery = t.dataset.gfilter; return renderBatch(); }
+    if (t.hasAttribute('data-showlog')) { state.showAllLog = !state.showAllLog; return renderBatch(); }
+    if (t.dataset.back) { location.hash = t.dataset.back; return go(t.dataset.back); }
+    if (t.classList.contains('nav')) { e.preventDefault(); location.hash = t.dataset.view; go(t.dataset.view); return; }
+    if (t.dataset.open) return openDrawer(t.dataset.open);
+    if (t.dataset.vendor) { state.vendor = t.dataset.vendor; return renderBoard(); }
+    if (t.dataset.spec) { state.spec = t.dataset.spec; return renderSpecs(); }
+    if (t.dataset.ds) { state.dataset = t.dataset.ds; return renderDatasets(); }
+    if (t.dataset.gospec) { closeAll(); state.spec = t.dataset.gospec; location.hash = 'specs'; return go('specs'); }
+    if (t.dataset.gods) { closeAll(); state.dataset = t.dataset.gods; location.hash = 'datasets'; return go('datasets'); }
+    if (t.dataset.advance) {
+      closeAll(); state.launch = newLaunch(t.dataset.advance); location.hash = 'launch'; go('launch'); window.scrollTo(0, 0); return;
+    }
+    if (t.dataset.lstep) { state.launch.step = Number(t.dataset.lstep); return renderLaunch(); }
+    if (t.dataset.lnext) {
+      const L = state.launch, a = t.dataset.lnext;
+      if (a === 'tospec') L.step = 1;
+      if (a === 'pilot') { const opts = planOptions(effSpec(L)); L.final = currentPlan(L, opts); L.step = 3; toast('Pilot complete for ' + L.final.per.filter((x) => x.share).map((x) => V[x.v]).join(' and ')); }
+      if (a === 'launch') L.step = 4;
+      renderLaunch(); window.scrollTo(0, 0); return;
+    }
+    if (t.dataset.plan) { state.launch.choice = t.dataset.plan; state.launch.alloc = null; return renderLaunch(); }
+    if (t.hasAttribute('data-replan')) {
+      const L = state.launch; const bad = VEND.filter((v) => L.final.a[v] && !(PILOT[v].gold >= L.spec.floor && PILOT[v].agree >= L.spec.agree));
+      const opts = planOptions(effSpec(L)); L.choice = 'rec'; L.alloc = null;
+      if (bad.some((v) => opts.rec.a[v])) { const keep = VEND.filter((v) => !bad.includes(v)); const a = { mercor: 0, surge: 0, micro1: 0 }; keep.forEach((v) => { a[v] = Math.round(100 / keep.length / 5) * 5; }); a[keep[0]] += 100 - keep.reduce((s, v) => s + a[v], 0); L.choice = 'custom'; L.alloc = a; }
+      L.step = 2; renderLaunch(); window.scrollTo(0, 0); return toast('Re-planned without ' + bad.map((v) => V[v]).join(' and '));
+    }
+    if (t.hasAttribute('data-send')) { t.disabled = true; return launchSend(); }
+    if (t.id === 'closeDrawer' || t.id === 'scrim' || t.id === 'cancelReq') return closeAll();
+    if (t.id === 'newReqBtn') return openModal();
+  });
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'diffToggle') { state.diff = e.target.checked; renderSpecs(); }
+    if (e.target.id === 'blendToggle' && state.launch) { state.launch.blend = e.target.checked; state.launch.choice = 'rec'; state.launch.alloc = null; renderLaunch(); }
+    if (e.target.id && e.target.id.startsWith('al-') && state.launch) {
+      const L = state.launch, opts = planOptions(effSpec(L)), cur = currentPlan(L, opts);
+      const a = Object.assign({}, L.alloc || cur.a); a[e.target.id.slice(3)] = Math.max(0, Math.min(100, Math.round(Number(e.target.value) || 0)));
+      L.alloc = a; L.choice = 'custom'; renderLaunch();
+    }
+  });
+
+  function openModal() { $('#modal').hidden = false; $('#scrim').hidden = false; $('#f-title').focus(); }
+  $('#reqForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const title = $('#f-title').value.trim(); if (!title) return;
+    const id = 'REQ-' + state.nextReq++;
+    items.unshift({ id, kind: 'request', stage: 'request', title, by: $('#f-by').value.trim() || 'Ty Hughes', evalName: $('#f-eval').value.trim(), priority: $('#f-pri').value, why: $('#f-why').value.trim() });
+    e.target.reset(); $('#f-by').value = 'Ty Hughes';
+    closeAll(); state.vendor = 'all'; location.hash = 'board'; go('board'); toast(id + ' added to intake'); openDrawer(id);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { if (state.tour >= 0) endTour(); return closeAll(); }
+    const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    if (!typing && (e.key === 'c' || e.key === 'C') && !e.metaKey && !e.ctrlKey) { e.preventDefault(); openModal(); }
+  });
+
+  go(location.hash.slice(1) || 'board');
+})();
+</script>
+
+</html>
