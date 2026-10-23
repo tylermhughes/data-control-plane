@@ -9,7 +9,7 @@ This file is kept up to date as each milestone moves forward (see the status tab
 |---|---|---|
 | M0 | Skeleton + Mac setup | ✅ Done (tested by Tyler 2026-10-23) |
 | M1 | API keys + projects | ✅ Done (tested by Tyler 2026-10-23) |
-| M2 | Capabilities, sources, versioned specs | ⚪ Not started |
+| M2 | Capabilities, sources, versioned specs | ✅ Done (tested by Tyler 2026-10-23) |
 | M3 | Requests + allocations | ⚪ Not started |
 | M4a | Batches + manual accept/reject | ⚪ Not started |
 | M4b | Events + outbound webhooks | ⚪ Not started |
@@ -104,4 +104,11 @@ Testing uses **`http://localhost:8000/docs` → "Try it out"**, with curl as a b
 - 2026-10-23 (M1): every create, update and delete writes an `events` row in the same transaction (`project.*`, `api_key.*`), ahead of webhooks in M4b.
 - 2026-10-23 (M1): an `Idempotency-Key` replay returns the original response with `Idempotent-Replayed: true`. Reusing a key with a different body gives 422. Replaying an API-key creation never re-shows the secret. Records are kept indefinitely for now; cleanup comes with the worker job queue (M4b).
 - 2026-10-23 (M1): successful `/healthz` and `/readyz` calls are left out of the access log. Failed ones still appear.
+- 2026-10-23 (M2): capabilities, data sources and specs live in a project. Admin keys can work in any project, project write keys in their own. `project_id` is optional for project keys (it defaults to their project) and required for admin keys. Names are unique per project. A project with contents can't be deleted.
+- 2026-10-23 (M2): `license_type` is a fixed list (owned, vendor_agreement, licensed, customer_terms, employee_notice, open_license, other), with details in `notes`. Rights are stored only; the training gate enforces them later.
+- 2026-10-23 (M2): `default_unit` defaults to `tasks` for RL environments and `items` for everything else.
+- 2026-10-23 (M2): spec versions are drafts until approved, then frozen. There is at most one draft per spec. A new version copies the latest one. Coverage targets are fractions (0.35 = 35%), cross-checked against attributes, and each attribute's shares add up to 1 or less. Acceptance rules are structured (`metric`, `operator`, `threshold`, optional `applies_to`) and stored now; they're checked from M6. `record_schema` is stored as-is until M6. A version diff endpoint is deferred until the UI needs it.
+- 2026-10-23 (M2): money is a string in one canonical form: at least 2 decimals, up to 4 when needed (`"25000.00"`, `"0.0125"`). That way Terraform and scripts never see false changes.
+- 2026-10-23 (M2): IDs are strictly increasing within a process, even within one millisecond, so events always sort in the order they happened.
+- 2026-10-23 (M2, M1 follow-up): `Idempotency-Key` must be letters, digits or `. _ : -` (1-255). Every request body in /docs shows a realistic example (enforced by a test).
 - 2026-10-23 (M0): MinIO is deferred to M6, the first milestone that reads files. oasdiff is deferred until there is a first release to compare against.

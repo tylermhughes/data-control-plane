@@ -8,7 +8,19 @@ Access = Literal["read", "write"]
 
 
 class ApiKeyCreate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "Vision dashboard (read-only)",
+                    "role": "project",
+                    "access": "read",
+                    "project_id": "prj_01m5n7gwqfa18zhpw1zwh7w2zy",
+                }
+            ]
+        },
+    )
 
     name: str = Field(min_length=1, max_length=200, examples=["CI pipeline"])
     role: Role = Field(
@@ -28,7 +40,9 @@ class ApiKeyCreate(BaseModel):
 
 
 class ApiKeyUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        extra="forbid", json_schema_extra={"examples": [{"name": "CI (main)"}]}
+    )
 
     name: str = Field(min_length=1, max_length=200)
 
@@ -37,11 +51,13 @@ class ApiKey(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str = Field(examples=["key_01jbx4k9r2abcdefghjkmnpqrs"])
-    name: str
-    key_prefix: str = Field(description="First characters of the key, to tell keys apart.")
-    role: Role
-    access: Access
-    project_id: str | None
+    name: str = Field(examples=["CI pipeline"])
+    key_prefix: str = Field(
+        description="First characters of the key, to tell keys apart.", examples=["dcp_Xk3fP9qa"]
+    )
+    role: Role = Field(examples=["admin"])
+    access: Access = Field(examples=["write"])
+    project_id: str | None = Field(examples=[None])
     created_at: datetime
     updated_at: datetime
     last_used_at: datetime | None = Field(description="Approximate: updated at most once a minute.")

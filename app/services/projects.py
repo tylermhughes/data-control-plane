@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.errors import Conflict, NotFound
 from app.ids import new_id
-from app.models import ApiKey, Project
+from app.models import ApiKey, Capability, DataSource, Project, Spec
 from app.schemas import projects as schemas
 from app.services import events
 from app.services.pagination import paginate
@@ -80,6 +80,13 @@ def delete_project(session: Session, actor: Principal, project_id: str) -> None:
     )
     if active_keys:
         raise Conflict("This project still has active API keys. Revoke them first.")
+    for model, label in (
+        (Capability, "capabilities"),
+        (DataSource, "data sources"),
+        (Spec, "specs"),
+    ):
+        if session.scalar(select(model.id).where(model.project_id == project_id)):
+            raise Conflict(f"This project still has {label}. Delete them first.")
     _emit(session, "project.deleted", project, actor)
     session.delete(project)
     session.flush()

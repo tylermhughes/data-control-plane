@@ -32,3 +32,7 @@ def get_principal(
 PrincipalDep = Annotated[Principal, Depends(get_principal)]
 Limit = Annotated[int, Query(ge=1, le=200, description="Maximum items per page.")]
 Cursor = Annotated[str | None, Query(description="`next_cursor` from the previous page.")]
+ProjectFilter = Annotated[
+    str | None,
+    Query(description="Only items in this project. Project keys always see only theirs."),
+]

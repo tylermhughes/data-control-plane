@@ -50,3 +50,22 @@ def test_api_key_replay_does_not_reveal_secret(client: TestClient, admin: dict[s
     assert "secret" in first
     assert "secret" not in second
     assert second["id"] == first["id"]
+
+
+def test_header_must_look_like_a_key(client: TestClient, admin: dict[str, str]) -> None:
+    pasted_json = '{"name": "Fulfillment vision"}'
+    response = client.post(
+        "/v1/projects", headers={**admin, "Idempotency-Key": pasted_json}, json={"name": "X"}
+    )
+    assert response.status_code == 422
+    assert response.json()["errors"][0]["field"] == "header.idempotency-key"
+    assert db_has_no_projects(client, admin)
+
+    ok = client.post(
+        "/v1/projects", headers={**admin, "Idempotency-Key": "ci-run-42"}, json={"name": "X"}
+    )
+    assert ok.status_code == 201
+
+
+def db_has_no_projects(client: TestClient, admin: dict[str, str]) -> bool:
+    return client.get("/v1/projects", headers=admin).json()["data"] == []

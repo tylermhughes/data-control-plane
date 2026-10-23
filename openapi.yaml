@@ -155,13 +155,19 @@ paths:
         schema:
           anyOf:
           - type: string
-            maxLength: 255
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
           - type: 'null'
-          description: Any unique string (e.g. a UUID). Retrying with the same key
-            returns the original response instead of creating a duplicate.
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
           title: Idempotency-Key
-        description: Any unique string (e.g. a UUID). Retrying with the same key returns
-          the original response instead of creating a duplicate.
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
       requestBody:
         required: true
         content:
@@ -469,13 +475,19 @@ paths:
         schema:
           anyOf:
           - type: string
-            maxLength: 255
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
           - type: 'null'
-          description: Any unique string (e.g. a UUID). Retrying with the same key
-            returns the original response instead of creating a duplicate.
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
           title: Idempotency-Key
-        description: Any unique string (e.g. a UUID). Retrying with the same key returns
-          the original response instead of creating a duplicate.
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
       requestBody:
         required: true
         content:
@@ -692,8 +704,1452 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Unprocessable Entity
+  /v1/capabilities:
+    get:
+      tags:
+      - capabilities
+      summary: List capabilities
+      operationId: list_capabilities_v1_capabilities_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only items in this project. Project keys always see only theirs.
+          title: Project Id
+        description: Only items in this project. Project keys always see only theirs.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_Capability_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    post:
+      tags:
+      - capabilities
+      summary: Create a capability
+      description: 'A capability is something the data should improve, measured by
+        one main eval metric.
+
+        `value_per_point` is what one point of improvement is worth; reports use it
+        for ROI.'
+      operationId: create_capability_v1_capabilities_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
+          - type: 'null'
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
+          title: Idempotency-Key
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapabilityCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Capability'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/capabilities/{capability_id}:
+    get:
+      tags:
+      - capabilities
+      summary: Get a capability
+      operationId: get_capability_v1_capabilities__capability_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: capability_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Capability Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Capability'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    patch:
+      tags:
+      - capabilities
+      summary: Update a capability
+      operationId: update_capability_v1_capabilities__capability_id__patch
+      security:
+      - ApiKey: []
+      parameters:
+      - name: capability_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Capability Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapabilityUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Capability'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - capabilities
+      summary: Delete a capability
+      operationId: delete_capability_v1_capabilities__capability_id__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: capability_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Capability Id
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/data-sources:
+    get:
+      tags:
+      - data sources
+      summary: List data sources
+      operationId: list_sources_v1_data_sources_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only items in this project. Project keys always see only theirs.
+          title: Project Id
+        description: Only items in this project. Project keys always see only theirs.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_DataSource_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    post:
+      tags:
+      - data sources
+      summary: Create a data source
+      description: 'A data source is anywhere data comes from: a vendor, an expert
+        network, a synthetic
+
+        pipeline, an RL environment, an internal workflow, beta users or a licensed
+        dataset.
+
+        Rights fields are recorded now and enforced by the training gate later.'
+      operationId: create_source_v1_data_sources_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
+          - type: 'null'
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
+          title: Idempotency-Key
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataSourceCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSource'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/data-sources/{source_id}:
+    get:
+      tags:
+      - data sources
+      summary: Get a data source
+      operationId: get_source_v1_data_sources__source_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: source_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Source Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSource'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    patch:
+      tags:
+      - data sources
+      summary: Update a data source
+      description: 'Send `"rights_expires_at": null` to clear the expiry date.'
+      operationId: update_source_v1_data_sources__source_id__patch
+      security:
+      - ApiKey: []
+      parameters:
+      - name: source_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Source Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataSourceUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSource'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - data sources
+      summary: Delete a data source
+      operationId: delete_source_v1_data_sources__source_id__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: source_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Source Id
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/specs:
+    get:
+      tags:
+      - specs
+      summary: List specs
+      operationId: list_specs_v1_specs_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only items in this project. Project keys always see only theirs.
+          title: Project Id
+        description: Only items in this project. Project keys always see only theirs.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_Spec_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    post:
+      tags:
+      - specs
+      summary: Create a spec
+      description: 'Creates the spec and its version 1 as a **draft**, from `first_version`.
+
+
+        Coverage targets and acceptance rules must refer to attributes (and values)
+        defined in
+
+        the same version. Each attribute''s target shares must add up to 1 (100%)
+        or less.'
+      operationId: create_spec_v1_specs_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
+          - type: 'null'
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
+          title: Idempotency-Key
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpecCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spec'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/specs/{spec_id}:
+    get:
+      tags:
+      - specs
+      summary: Get a spec
+      operationId: get_spec_v1_specs__spec_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: spec_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Spec Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spec'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    patch:
+      tags:
+      - specs
+      summary: Rename or re-describe a spec
+      operationId: update_spec_v1_specs__spec_id__patch
+      security:
+      - ApiKey: []
+      parameters:
+      - name: spec_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Spec Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpecUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spec'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - specs
+      summary: Delete a spec and all its versions
+      description: From M3 on, specs used by a request can't be deleted.
+      operationId: delete_spec_v1_specs__spec_id__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: spec_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Spec Id
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/specs/{spec_id}/versions:
+    get:
+      tags:
+      - specs
+      summary: List a spec's versions
+      operationId: list_versions_v1_specs__spec_id__versions_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: spec_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Spec Id
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_SpecVersion_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    post:
+      tags:
+      - specs
+      summary: Start the next version (draft)
+      description: 'The new draft starts as a copy of the latest version. Send only
+        what changes; send
+
+        `{}` to start from an exact copy. Fails if the spec already has a draft.'
+      operationId: create_version_v1_specs__spec_id__versions_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: spec_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Spec Id
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
+          - type: 'null'
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
+          title: Idempotency-Key
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpecVersionUpdate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecVersion'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/specs/{spec_id}/versions/{version}:
+    get:
+      tags:
+      - specs
+      summary: Get one version of a spec
+      operationId: get_version_v1_specs__spec_id__versions__version__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: spec_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Spec Id
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          description: Version number, e.g. 2.
+          title: Version
+        description: Version number, e.g. 2.
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecVersion'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    patch:
+      tags:
+      - specs
+      summary: Edit a draft version
+      description: 'Drafts only. Fields you send replace the draft''s; the rest are
+        kept.
+
+        Approved versions can''t change (409).'
+      operationId: update_version_v1_specs__spec_id__versions__version__patch
+      security:
+      - ApiKey: []
+      parameters:
+      - name: spec_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Spec Id
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          description: Version number, e.g. 2.
+          title: Version
+        description: Version number, e.g. 2.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpecVersionUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecVersion'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - specs
+      summary: Discard a draft version
+      description: Drafts only. Approved versions can never be deleted.
+      operationId: delete_version_v1_specs__spec_id__versions__version__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: spec_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Spec Id
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          description: Version number, e.g. 2.
+          title: Version
+        description: Version number, e.g. 2.
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/specs/{spec_id}/versions/{version}/approve:
+    post:
+      tags:
+      - specs
+      summary: Approve a draft (freezes it)
+      description: 'After approval the version can never be edited or deleted. Records
+        who approved it
+
+        (`approved_by`) and which API key did it.'
+      operationId: approve_version_v1_specs__spec_id__versions__version__approve_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: spec_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Spec Id
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          description: Version number, e.g. 2.
+          title: Version
+        description: Version number, e.g. 2.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpecVersionApprove'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecVersion'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
 components:
   schemas:
+    AcceptanceRule:
+      properties:
+        metric:
+          type: string
+          maxLength: 64
+          minLength: 1
+          pattern: ^[a-z][a-z0-9_]*$
+          title: Metric
+          description: Lowercase letters, digits and underscores, starting with a
+            letter.
+          examples:
+          - agreement
+        operator:
+          type: string
+          enum:
+          - '>='
+          - '>'
+          - <=
+          - <
+          - ==
+          title: Operator
+          examples:
+          - '>='
+        threshold:
+          type: number
+          title: Threshold
+          examples:
+          - 0.85
+        applies_to:
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          title: Applies To
+          description: Limit the rule to items with these attribute values.
+          examples:
+          - damage_size: small_dent
+        description:
+          type: string
+          maxLength: 2000
+          title: Description
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+      - metric
+      - operator
+      - threshold
+      title: AcceptanceRule
+      description: A pass/fail rule for batches, e.g. agreement >= 0.85. Checked automatically
+        from M6.
     ApiKey:
       properties:
         id:
@@ -704,27 +2160,37 @@ components:
         name:
           type: string
           title: Name
+          examples:
+          - CI pipeline
         key_prefix:
           type: string
           title: Key Prefix
           description: First characters of the key, to tell keys apart.
+          examples:
+          - dcp_Xk3fP9qa
         role:
           type: string
           enum:
           - admin
           - project
           title: Role
+          examples:
+          - admin
         access:
           type: string
           enum:
           - read
           - write
           title: Access
+          examples:
+          - write
         project_id:
           anyOf:
           - type: string
           - type: 'null'
           title: Project Id
+          examples:
+          - null
         created_at:
           type: string
           format: date-time
@@ -796,6 +2262,11 @@ components:
       - name
       - role
       title: ApiKeyCreate
+      examples:
+      - access: read
+        name: Vision dashboard (read-only)
+        project_id: prj_01m5n7gwqfa18zhpw1zwh7w2zy
+        role: project
     ApiKeyCreated:
       properties:
         id:
@@ -806,27 +2277,37 @@ components:
         name:
           type: string
           title: Name
+          examples:
+          - CI pipeline
         key_prefix:
           type: string
           title: Key Prefix
           description: First characters of the key, to tell keys apart.
+          examples:
+          - dcp_Xk3fP9qa
         role:
           type: string
           enum:
           - admin
           - project
           title: Role
+          examples:
+          - admin
         access:
           type: string
           enum:
           - read
           - write
           title: Access
+          examples:
+          - write
         project_id:
           anyOf:
           - type: string
           - type: 'null'
           title: Project Id
+          examples:
+          - null
         created_at:
           type: string
           format: date-time
@@ -879,6 +2360,484 @@ components:
       required:
       - name
       title: ApiKeyUpdate
+      examples:
+      - name: CI (main)
+    Attribute:
+      properties:
+        name:
+          type: string
+          maxLength: 64
+          minLength: 1
+          pattern: ^[a-z][a-z0-9_]*$
+          title: Name
+          description: Lowercase letters, digits and underscores, starting with a
+            letter.
+          examples:
+          - package_type
+        description:
+          type: string
+          maxLength: 2000
+          title: Description
+          default: ''
+        values:
+          items:
+            type: string
+          type: array
+          maxItems: 200
+          minItems: 1
+          title: Values
+          examples:
+          - - corrugated_box
+            - poly_mailer
+            - shrink_wrapped
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - values
+      title: Attribute
+      description: Something recorded about every item, with its allowed values.
+    Capability:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - cap_01m5n7gwqfa18zhpw1zwh7w2zy
+        project_id:
+          type: string
+          title: Project Id
+          examples:
+          - prj_01m5n7gwqfa18zhpw1zwh7w2zy
+        name:
+          type: string
+          title: Name
+          examples:
+          - Package damage detection
+        description:
+          type: string
+          title: Description
+          examples:
+          - Find dents, tears and crushes on packages on the conveyor.
+        eval_metric:
+          type: string
+          title: Eval Metric
+          examples:
+          - recall@0.5
+        higher_is_better:
+          type: boolean
+          title: Higher Is Better
+        value_per_point:
+          type: string
+          title: Value Per Point
+          examples:
+          - '25000.00'
+        currency:
+          type: string
+          title: Currency
+          examples:
+          - USD
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - project_id
+      - name
+      - description
+      - eval_metric
+      - higher_is_better
+      - value_per_point
+      - currency
+      - created_at
+      - updated_at
+      title: Capability
+    CapabilityCreate:
+      properties:
+        project_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Project Id
+          description: Project to create this in. Optional for project keys (defaults
+            to their project); required for admin keys.
+          examples:
+          - prj_01m5n7gwqfa18zhpw1zwh7w2zy
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+          description: Unique within the project.
+        description:
+          type: string
+          maxLength: 10000
+          title: Description
+          default: ''
+        eval_metric:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Eval Metric
+          description: The main eval metric for this capability.
+        higher_is_better:
+          type: boolean
+          title: Higher Is Better
+          description: False for metrics like error rate.
+          default: true
+        value_per_point:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: string
+          title: Value Per Point
+          description: Estimated business value of one point of improvement on the
+            eval metric.
+          examples:
+          - '25000.00'
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+          title: Currency
+          description: ISO 4217 code.
+          examples:
+          - USD
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - eval_metric
+      - value_per_point
+      - currency
+      title: CapabilityCreate
+      examples:
+      - currency: USD
+        description: Find dents, tears and crushes on packages on the conveyor.
+        eval_metric: recall@0.5
+        higher_is_better: true
+        name: Package damage detection
+        value_per_point: '25000.00'
+    CapabilityUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 200
+            minLength: 1
+          - type: 'null'
+          title: Name
+        description:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Description
+        eval_metric:
+          anyOf:
+          - type: string
+            maxLength: 200
+            minLength: 1
+          - type: 'null'
+          title: Eval Metric
+        higher_is_better:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Higher Is Better
+        value_per_point:
+          anyOf:
+          - anyOf:
+            - type: number
+              minimum: 0.0
+            - type: string
+            examples:
+            - '25000.00'
+          - type: 'null'
+          title: Value Per Point
+        currency:
+          anyOf:
+          - type: string
+            pattern: ^[A-Z]{3}$
+            description: ISO 4217 code.
+            examples:
+            - USD
+          - type: 'null'
+          title: Currency
+      additionalProperties: false
+      type: object
+      title: CapabilityUpdate
+      description: Only the fields you send are changed. A capability can't move to
+        another project.
+      examples:
+      - value_per_point: '30000.00'
+    DataSource:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - src_01m5n7gwqfa18zhpw1zwh7w2zy
+        project_id:
+          type: string
+          title: Project Id
+          examples:
+          - prj_01m5n7gwqfa18zhpw1zwh7w2zy
+        name:
+          type: string
+          title: Name
+          examples:
+          - Surge
+        description:
+          type: string
+          title: Description
+        kind:
+          type: string
+          enum:
+          - human_vendor
+          - expert_network
+          - synthetic
+          - rl_environment
+          - enterprise_workflow
+          - beta_users
+          - licensed_dataset
+          title: Kind
+        default_unit:
+          type: string
+          maxLength: 32
+          minLength: 1
+          pattern: ^[a-z][a-z0-9_ ]*$
+          title: Default Unit
+          description: What one unit of data is, e.g. images, tasks, reviews, records,
+            flags.
+          examples:
+          - images
+        license_type:
+          type: string
+          enum:
+          - owned
+          - vendor_agreement
+          - licensed
+          - customer_terms
+          - employee_notice
+          - open_license
+          - other
+          title: License Type
+          examples:
+          - vendor_agreement
+        consent_scope:
+          type: string
+          title: Consent Scope
+          examples:
+          - Contributor consent for model training on file with vendor.
+        rights_expires_at:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Rights Expires At
+          examples:
+          - '2028-12-31'
+        pii_handling:
+          type: string
+          title: Pii Handling
+          examples:
+          - No faces or addresses; vendor blurs before delivery.
+        notes:
+          type: string
+          title: Notes
+          examples:
+          - MSA signed 2026-03; IP assigned to us.
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - project_id
+      - name
+      - description
+      - kind
+      - default_unit
+      - license_type
+      - consent_scope
+      - rights_expires_at
+      - pii_handling
+      - notes
+      - created_at
+      - updated_at
+      title: DataSource
+    DataSourceCreate:
+      properties:
+        project_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Project Id
+          description: Project to create this in. Optional for project keys (defaults
+            to their project); required for admin keys.
+          examples:
+          - prj_01m5n7gwqfa18zhpw1zwh7w2zy
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+          description: Unique within the project.
+        description:
+          type: string
+          maxLength: 10000
+          title: Description
+          default: ''
+        kind:
+          type: string
+          enum:
+          - human_vendor
+          - expert_network
+          - synthetic
+          - rl_environment
+          - enterprise_workflow
+          - beta_users
+          - licensed_dataset
+          title: Kind
+        default_unit:
+          anyOf:
+          - type: string
+            maxLength: 32
+            minLength: 1
+            pattern: ^[a-z][a-z0-9_ ]*$
+          - type: 'null'
+          title: Default Unit
+          description: Defaults to `tasks` for RL environments and `items` for everything
+            else.
+        license_type:
+          type: string
+          enum:
+          - owned
+          - vendor_agreement
+          - licensed
+          - customer_terms
+          - employee_notice
+          - open_license
+          - other
+          title: License Type
+          description: Details go in `notes`.
+        consent_scope:
+          type: string
+          maxLength: 10000
+          title: Consent Scope
+          description: What contributors agreed to.
+          default: ''
+        rights_expires_at:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Rights Expires At
+          description: When the right to use it ends.
+        pii_handling:
+          type: string
+          maxLength: 10000
+          title: Pii Handling
+          default: ''
+        notes:
+          type: string
+          maxLength: 10000
+          title: Notes
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - kind
+      - license_type
+      title: DataSourceCreate
+      examples:
+      - consent_scope: Contributor consent for model training on file with vendor.
+        default_unit: images
+        kind: human_vendor
+        license_type: vendor_agreement
+        name: Surge
+        notes: MSA signed 2026-03; IP assigned to us.
+        pii_handling: No faces or addresses; vendor blurs before delivery.
+        rights_expires_at: '2028-12-31'
+    DataSourceUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 200
+            minLength: 1
+          - type: 'null'
+          title: Name
+        description:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Description
+        default_unit:
+          anyOf:
+          - type: string
+            maxLength: 32
+            minLength: 1
+            pattern: ^[a-z][a-z0-9_ ]*$
+          - type: 'null'
+          title: Default Unit
+        license_type:
+          anyOf:
+          - type: string
+            enum:
+            - owned
+            - vendor_agreement
+            - licensed
+            - customer_terms
+            - employee_notice
+            - open_license
+            - other
+          - type: 'null'
+          title: License Type
+        consent_scope:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Consent Scope
+        rights_expires_at:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Rights Expires At
+        pii_handling:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Pii Handling
+        notes:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Notes
+      additionalProperties: false
+      type: object
+      title: DataSourceUpdate
+      description: Only the fields you send are changed. `kind` and project can't
+        change.
+      examples:
+      - rights_expires_at: '2029-06-30'
     Health:
       properties:
         status:
@@ -907,6 +2866,42 @@ components:
       - data
       - next_cursor
       title: Page[ApiKey]
+    Page_Capability_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/Capability'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[Capability]
+    Page_DataSource_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/DataSource'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[DataSource]
     Page_Project_:
       properties:
         data:
@@ -925,6 +2920,42 @@ components:
       - data
       - next_cursor
       title: Page[Project]
+    Page_SpecVersion_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/SpecVersion'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[SpecVersion]
+    Page_Spec_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/Spec'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[Spec]
     Problem:
       properties:
         type:
@@ -936,14 +2967,20 @@ components:
           type: string
           title: Title
           description: Short summary of the kind of problem.
+          examples:
+          - Conflict
         status:
           type: integer
           title: Status
           description: HTTP status code.
+          examples:
+          - 409
         detail:
           type: string
           title: Detail
           description: What went wrong, in plain language.
+          examples:
+          - A project named 'Fulfillment vision' already exists.
         errors:
           anyOf:
           - items:
@@ -970,9 +3007,13 @@ components:
         name:
           type: string
           title: Name
+          examples:
+          - Fulfillment vision
         description:
           type: string
           title: Description
+          examples:
+          - Warehouse camera models
         created_at:
           type: string
           format: date-time
@@ -1007,6 +3048,9 @@ components:
       required:
       - name
       title: ProjectCreate
+      examples:
+      - description: Warehouse camera models
+        name: Fulfillment vision
     ProjectUpdate:
       properties:
         name:
@@ -1026,6 +3070,8 @@ components:
       type: object
       title: ProjectUpdate
       description: Only the fields you send are changed.
+      examples:
+      - name: Fulfillment CV
     Readiness:
       properties:
         status:
@@ -1045,6 +3091,378 @@ components:
       - status
       - database
       title: Readiness
+    Spec:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - spc_01m5n7gwqfa18zhpw1zwh7w2zy
+        project_id:
+          type: string
+          title: Project Id
+          examples:
+          - prj_01m5n7gwqfa18zhpw1zwh7w2zy
+        name:
+          type: string
+          title: Name
+          examples:
+          - Package damage
+        description:
+          type: string
+          title: Description
+        latest_version:
+          type: integer
+          title: Latest Version
+          description: Highest version number, draft or approved.
+        latest_approved_version:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Latest Approved Version
+          description: Highest approved version number. Null until one is approved.
+        draft_version:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Draft Version
+          description: The open draft's number, if there is one.
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - project_id
+      - name
+      - description
+      - latest_version
+      - latest_approved_version
+      - draft_version
+      - created_at
+      - updated_at
+      title: Spec
+    SpecContent:
+      properties:
+        guidelines:
+          type: string
+          maxLength: 200000
+          title: Guidelines
+          description: Instructions, plain text or Markdown.
+          default: ''
+        attributes:
+          items:
+            $ref: '#/components/schemas/Attribute'
+          type: array
+          maxItems: 100
+          title: Attributes
+        coverage_targets:
+          additionalProperties:
+            additionalProperties:
+              type: number
+            type: object
+          type: object
+          title: Coverage Targets
+          description: Target share of items per attribute value, as fractions (0.35
+            = 35%). Each attribute's shares must add up to 1 or less.
+          examples:
+          - package_type:
+              poly_mailer: 0.35
+              shrink_wrapped: 0.35
+        acceptance_rules:
+          items:
+            $ref: '#/components/schemas/AcceptanceRule'
+          type: array
+          maxItems: 100
+          title: Acceptance Rules
+        record_schema:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Record Schema
+          description: Optional JSON Schema for each record. Checked against files
+            from M6.
+        change_note:
+          type: string
+          maxLength: 10000
+          title: Change Note
+          description: What changed in this version.
+          default: ''
+      additionalProperties: false
+      type: object
+      title: SpecContent
+      description: 'The content of a spec version. Cross-checked: targets and rules
+        must use real attributes.'
+    SpecCreate:
+      properties:
+        project_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Project Id
+          description: Project to create this in. Optional for project keys (defaults
+            to their project); required for admin keys.
+          examples:
+          - prj_01m5n7gwqfa18zhpw1zwh7w2zy
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+          description: Unique within the project.
+        description:
+          type: string
+          maxLength: 10000
+          title: Description
+          default: ''
+        first_version:
+          $ref: '#/components/schemas/SpecContent'
+          description: Content of version 1, created as a draft.
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      title: SpecCreate
+      examples:
+      - description: Damage on packages at the conveyor.
+        first_version:
+          acceptance_rules:
+          - metric: agreement
+            operator: '>='
+            threshold: 0.85
+          - metric: duplicate_rate
+            operator: <=
+            threshold: 0.02
+          attributes:
+          - name: package_type
+            values:
+            - corrugated_box
+            - poly_mailer
+            - shrink_wrapped
+          - name: conveyor_zone
+            values:
+            - induct
+            - sort
+            - outbound_dock
+          change_note: First version.
+          coverage_targets:
+            conveyor_zone:
+              induct: 0.5
+              outbound_dock: 0.15
+              sort: 0.35
+            package_type:
+              corrugated_box: 0.3
+              poly_mailer: 0.35
+              shrink_wrapped: 0.35
+          guidelines: Label every area of visible damage at least 12 px across. One
+            box per area.
+        name: Package damage
+    SpecUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 200
+            minLength: 1
+          - type: 'null'
+          title: Name
+        description:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Description
+      additionalProperties: false
+      type: object
+      title: SpecUpdate
+      description: Renames or re-describes the spec. Content changes go into versions.
+      examples:
+      - name: Package damage (conveyor)
+    SpecVersion:
+      properties:
+        guidelines:
+          type: string
+          maxLength: 200000
+          title: Guidelines
+          description: Instructions, plain text or Markdown.
+          default: ''
+        attributes:
+          items:
+            $ref: '#/components/schemas/Attribute'
+          type: array
+          maxItems: 100
+          title: Attributes
+        coverage_targets:
+          additionalProperties:
+            additionalProperties:
+              type: number
+            type: object
+          type: object
+          title: Coverage Targets
+          description: Target share of items per attribute value, as fractions (0.35
+            = 35%). Each attribute's shares must add up to 1 or less.
+          examples:
+          - package_type:
+              poly_mailer: 0.35
+              shrink_wrapped: 0.35
+        acceptance_rules:
+          items:
+            $ref: '#/components/schemas/AcceptanceRule'
+          type: array
+          maxItems: 100
+          title: Acceptance Rules
+        record_schema:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Record Schema
+          description: Optional JSON Schema for each record. Checked against files
+            from M6.
+        change_note:
+          type: string
+          maxLength: 10000
+          title: Change Note
+          description: What changed in this version.
+          default: ''
+        id:
+          type: string
+          title: Id
+          examples:
+          - spv_01m5n7gwqfa18zhpw1zwh7w2zy
+        spec_id:
+          type: string
+          title: Spec Id
+          examples:
+          - spc_01m5n7gwqfa18zhpw1zwh7w2zy
+        version:
+          type: integer
+          title: Version
+          examples:
+          - 2
+        status:
+          type: string
+          enum:
+          - draft
+          - approved
+          title: Status
+        approved_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Approved By
+          examples:
+          - Priya Nair
+        approved_by_key_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Approved By Key Id
+        approved_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Approved At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - spec_id
+      - version
+      - status
+      - approved_by
+      - approved_by_key_id
+      - approved_at
+      - created_at
+      - updated_at
+      title: SpecVersion
+    SpecVersionApprove:
+      properties:
+        approved_by:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Approved By
+          description: Name of the person approving this version.
+      additionalProperties: false
+      type: object
+      required:
+      - approved_by
+      title: SpecVersionApprove
+      examples:
+      - approved_by: Priya Nair
+    SpecVersionUpdate:
+      properties:
+        guidelines:
+          anyOf:
+          - type: string
+            maxLength: 200000
+          - type: 'null'
+          title: Guidelines
+        attributes:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Attribute'
+            type: array
+            maxItems: 100
+          - type: 'null'
+          title: Attributes
+        coverage_targets:
+          anyOf:
+          - additionalProperties:
+              additionalProperties:
+                type: number
+              type: object
+            type: object
+          - type: 'null'
+          title: Coverage Targets
+        acceptance_rules:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/AcceptanceRule'
+            type: array
+            maxItems: 100
+          - type: 'null'
+          title: Acceptance Rules
+        record_schema:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Record Schema
+        change_note:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Change Note
+      additionalProperties: false
+      type: object
+      title: SpecVersionUpdate
+      description: For drafts only. Fields you send replace the draft's; the rest
+        are kept.
+      examples:
+      - change_note: 'More shrink-wrapped: recall is weakest there.'
+        coverage_targets:
+          package_type:
+            corrugated_box: 0.25
+            poly_mailer: 0.3
+            shrink_wrapped: 0.45
   securitySchemes:
     ApiKey:
       type: http

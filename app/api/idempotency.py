@@ -48,9 +48,11 @@ async def _idempotency(
     idempotency_key: Annotated[
         str | None,
         Header(
-            max_length=255,
-            description="Any unique string (e.g. a UUID). Retrying with the same key "
-            "returns the original response instead of creating a duplicate.",
+            pattern=r"^[A-Za-z0-9._:-]{1,255}$",
+            description="Any unique value, e.g. a UUID or `ci-run-42` (letters, digits and "
+            "`. _ : -`, up to 255 characters). Retrying with the same key returns the original "
+            "response instead of creating a duplicate. Leave empty if you don't need it.",
+            examples=["3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94"],
         ),
     ] = None,
 ) -> Idempotency:
