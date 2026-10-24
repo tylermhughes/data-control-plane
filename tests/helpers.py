@@ -128,3 +128,14 @@ class Setup:
     def batch(self, allocation_id: str, **extra: Any) -> Any:
         body = {"allocation_id": allocation_id, "delivered_count": 1000, "spend": "1550", **extra}
         return post_ok(self.client, "/v1/batches", self.admin, body)
+
+
+def write_jsonl(path: Any, records: list[dict[str, Any]]) -> str:
+    """Write records as JSONL; returns the file:// URI DCP reads it from."""
+    import json
+    from pathlib import Path
+
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("".join(json.dumps(r) + "\n" for r in records))
+    return target.resolve().as_uri()

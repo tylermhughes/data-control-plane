@@ -1,5 +1,7 @@
 import os
+import tempfile
 from collections.abc import Callable, Iterator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,6 +11,9 @@ os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL", "postgresql+psycopg://dcp:dcp-test@127.0.0.1:55432/dcp_test"
 )
 os.environ.setdefault("DCP_SECRET_KEY", "test-only-secret-key-not-for-real-use-0123456789")
+# Quality checks read local files from here (file:// URIs must be inside it).
+DATA_DIR = Path(tempfile.mkdtemp(prefix="dcp-test-data-")).resolve()
+os.environ["DCP_LOCAL_DATA_DIR"] = str(DATA_DIR)
 
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
@@ -74,3 +79,8 @@ def make_key(db: Session) -> MakeKey:
 @pytest.fixture
 def admin(make_key: MakeKey) -> dict[str, str]:
     return make_key()
+
+
+@pytest.fixture
+def data_dir() -> Path:
+    return DATA_DIR

@@ -5,12 +5,14 @@
 It creates a fresh project and runs the whole loop:
   1. a capability, a spec with coverage targets, and three sources
   2. a request split across two vendors and one internal source
-  3. batches with spend and counts, including coverage gaps
+  3. batches with real delivery files, checked automatically (format, schema, duplicates,
+     acceptance rules), and coverage gaps
   4. two dataset versions with eval results
   5. the portfolio: spend, cost per usable unit, eval change and points per $10K
   6. signed webhooks for every step, received and checked by this script
 
 Options: DCP_URL (default http://localhost:8000), --no-webhooks, --port (default 9000).
+Delivery files are written to ./data (which DCP sees as /data); see --data-dir.
 Runs on Python 3.9 and later (macOS's built-in python3 works).
 """
 
@@ -92,6 +94,74 @@ class Inbox:
         self.server.server_close()
 
 
+# --- delivery files --------------------------------------------------------------------------
+
+RECORD_SCHEMA = {
+    "type": "object",
+    "required": ["id", "image_uri", "package_type", "severity"],
+    "properties": {
+        "id": {"type": "string"},
+        "image_uri": {"type": "string"},
+        "package_type": {"enum": ["box", "mailer", "shrink_wrapped"]},
+        "severity": {"type": "integer", "minimum": 1, "maximum": 5},
+    },
+}
+
+
+def make_records(source: str, mix: dict[str, int]) -> list[dict[str, Any]]:
+    """One labelled image per record, with the given number of each package type."""
+    records = []
+    for package_type, count in mix.items():
+        for _ in range(count):
+            i = len(records)
+            records.append(
+                {
+                    "id": f"{source}-{i:05d}",
+                    "image_uri": f"s3://acme-cv-intake/{source}/img_{i:05d}.jpg",
+                    "package_type": package_type,
+                    "severity": 1 + i % 5,
+                }
+            )
+    return records
+
+
+class Files:
+    """Writes delivery files where DCP can read them (DCP's /data is this machine's ./data)."""
+
+    def __init__(self, data_dir: Path, uri_root: str, run_name: str) -> None:
+        self.dir = data_dir / run_name
+        self.uri_root = f"{uri_root.rstrip('/')}/{run_name}"
+        self.dir.mkdir(parents=True, exist_ok=True)
+
+    def write(self, name: str, records: list[dict[str, Any]]) -> dict[str, Any]:
+        (self.dir / name).write_text("".join(json.dumps(r) + "\n" for r in records))
+        return {
+            "uri": f"file://{self.uri_root}/{name}",
+            "format": "jsonl",
+            "record_count": len(records),
+        }
+
+
+def wait_for_checks(api: Api, batch_id: str, timeout: float = 120) -> dict[str, Any]:
+    deadline = time.time() + timeout
+    while True:
+        batch = api("GET", f"/v1/batches/{batch_id}")
+        if batch["status"] != "checking" and batch["quality"]["status"] not in (
+            "queued",
+            "running",
+        ):
+            return batch
+        if time.time() > deadline:
+            raise DemoError(f"Checks on {batch_id} didn't finish. Is the worker running?")
+        time.sleep(0.5)
+
+
+def describe_checks(api: Api, batch: dict[str, Any]) -> str:
+    run = api("GET", f"/v1/quality-runs/{batch['quality']['run_id']}")
+    notes = [c["summary"] for c in run["checks"] if c["outcome"] in ("warning", "failed")]
+    return f"checks {run['status']}" + (": " + " | ".join(notes) if notes else "")
+
+
 # --- the demo --------------------------------------------------------------------------------
 
 
@@ -99,8 +169,20 @@ def money(value: str) -> str:
     return f"${float(value):,.2f}"
 
 
-def run(api: Api, *, webhook_port: int | None = None, say: Any = print) -> dict[str, Any]:
+def run(
+    api: Api,
+    *,
+    webhook_port: int | None = None,
+    say: Any = print,
+    data_dir: Path | None = None,
+    uri_root: str = "/data",
+) -> dict[str, Any]:
     """Runs the north star. Returns the portfolio and webhook counts (used by the tests)."""
+    files = Files(
+        data_dir or Path(__file__).resolve().parents[1] / "data",
+        uri_root,
+        f"demo-{time.strftime('%Y%m%d-%H%M%S')}",
+    )
     inbox = endpoint = None
     if webhook_port:
         inbox = Inbox(webhook_port)
@@ -146,8 +228,11 @@ def run(api: Api, *, webhook_port: int | None = None, say: Any = print) -> dict[
                         "package_type": {"box": 0.30, "mailer": 0.35, "shrink_wrapped": 0.35}
                     },
                     "coverage_tolerance": 0.05,
+                    "record_schema": RECORD_SCHEMA,
                     "acceptance_rules": [
-                        {"metric": "agreement", "operator": ">=", "threshold": 0.85}
+                        {"metric": "agreement", "operator": ">=", "threshold": 0.85},
+                        {"metric": "duplicate_rate", "operator": "<=", "threshold": 0.02},
+                        {"metric": "schema_valid_rate", "operator": ">=", "threshold": 0.99},
                     ],
                 },
             },
@@ -210,49 +295,49 @@ def run(api: Api, *, webhook_port: int | None = None, say: Any = print) -> dict[
             allocs[name] = api("POST", f"/v1/allocations/{alloc['id']}/activate")
             say(f"   {name:<15} {qty:>6,} images at ${rate} = {money(alloc['quoted_cost'])}")
 
-        say("\n3. Batches with spend and counts; coverage against targets")
+        say("\n3. Deliveries, checked automatically; coverage against targets")
+        surge_records = make_records("surge", {"box": 1474, "mailer": 1368, "shrink_wrapped": 1158})
+        # Mercor re-delivers 50 images Surge already delivered (a cross-batch duplicate).
+        mercor_records = surge_records[:50] + make_records(
+            "mercor", {"box": 1046, "mailer": 1405, "shrink_wrapped": 1499}
+        )
+        # The returns export repeats 30 rows and has 12 severities out of range.
+        returns_records = make_records(
+            "returns", {"box": 1028, "mailer": 1028, "shrink_wrapped": 914}
+        )
+        returns_records += returns_records[:30]
+        for r in returns_records[100:112]:
+            r["severity"] = 9
+
         surge = api(
             "POST",
             "/v1/batches",
             {
                 "allocation_id": allocs["Surge"]["id"],
-                "artifacts": [
-                    {
-                        "uri": "s3://acme-cv-intake/surge/delivery-1.jsonl",
-                        "format": "jsonl",
-                        "record_count": 4000,
-                    }
-                ],
+                "artifacts": [files.write("surge.jsonl", surge_records)],
                 "delivered_count": 4000,
                 "spend": "6200",
                 "contributor_count": 46,
+                "reported_metrics": {"agreement": 0.91},
             },
         )
+        surge = wait_for_checks(api, surge["id"])
+        say(f"   Surge: {surge['status']} ({describe_checks(api, surge)})")
         api(
             "POST",
             f"/v1/batches/{surge['id']}/accept",
-            {
-                "accepted_count": 3800,
-                "decided_by": "Dana Okafor",
-                "attribute_counts": {
-                    "package_type": {"box": 1400, "mailer": 1300, "shrink_wrapped": 1100}
-                },
-            },
+            {"accepted_count": 3800, "decided_by": "Dana Okafor"},
         )
+
         mercor = api(  # accepted in the vendor's own QA, imported already decided
             "POST",
             "/v1/batches",
             {
                 "allocation_id": allocs["Mercor"]["id"],
-                "artifacts": [
-                    {
-                        "uri": "s3://acme-cv-intake/mercor/delivery-1.jsonl",
-                        "format": "jsonl",
-                        "record_count": 4000,
-                    }
-                ],
+                "artifacts": [files.write("mercor.jsonl", mercor_records)],
                 "delivered_count": 4000,
                 "spend": "6600",
+                "reported_metrics": {"agreement": 0.88},
                 "external_ref": "mercor-delivery-118",
                 "decision": {
                     "status": "accepted",
@@ -264,32 +349,23 @@ def run(api: Api, *, webhook_port: int | None = None, say: Any = print) -> dict[
                 },
             },
         )
+        mercor = wait_for_checks(api, mercor["id"])
+        say(f"   Mercor: {mercor['status']} by mercor-qa ({describe_checks(api, mercor)})")
+
         returns = api(
             "POST",
             "/v1/batches",
             {
                 "allocation_id": allocs["Returns photos"]["id"],
-                "artifacts": [
-                    {
-                        "uri": "s3://acme-cv-intake/returns/delivery-1.jsonl",
-                        "format": "jsonl",
-                        "record_count": 3000,
-                    }
-                ],
+                "artifacts": [files.write("returns.jsonl", returns_records)],
                 "delivered_count": 3000,
                 "spend": "600",
             },
         )
-        api(
-            "POST",
-            f"/v1/batches/{returns['id']}/accept",
-            {
-                "accepted_count": 2600,
-                "attribute_counts": {
-                    "package_type": {"box": 900, "mailer": 900, "shrink_wrapped": 800}
-                },
-            },
-        )
+        returns = wait_for_checks(api, returns["id"])
+        say(f"   Returns photos: {returns['status']} ({describe_checks(api, returns)})")
+        api("POST", f"/v1/batches/{returns['id']}/accept", {"accepted_count": 2600})
+
         surge_cov = api("GET", f"/v1/batches/{surge['id']}/coverage")
         request_cov = api("GET", f"/v1/requests/{req['id']}/coverage")
         say(f"   Surge batch gaps: {surge_cov['gaps'] or 'none'}")
@@ -402,6 +478,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run the DCP north-star demo.")
     parser.add_argument("--no-webhooks", action="store_true", help="Skip step 6.")
     parser.add_argument("--port", type=int, default=9000, help="Port for receiving webhooks.")
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=Path(__file__).resolve().parents[1] / "data",
+        help="Where to write delivery files: the folder DCP reads as /data (default ./data).",
+    )
     args = parser.parse_args()
     key = os.environ.get("DCP_API_KEY")
     if not key:
@@ -411,7 +493,7 @@ def main() -> int:
         return 2
     api = http_api(os.environ.get("DCP_URL", "http://localhost:8000"), key)
     try:
-        run(api, webhook_port=None if args.no_webhooks else args.port)
+        run(api, webhook_port=None if args.no_webhooks else args.port, data_dir=args.data_dir)
     except DemoError as exc:
         print(f"\nStopped: {exc}")
         return 1

@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     # endpoint's secret, so keep it stable and back it up with the database.
     dcp_secret_key: str = Field(min_length=32)
     webhook_timeout_seconds: float = 10.0
+    # Quality checks: where local files live (file:// URIs must be inside it), an optional
+    # S3-compatible endpoint (e.g. Cloudflare R2), and a cap on records read per batch.
+    # S3 credentials come from the standard AWS settings (AWS_ACCESS_KEY_ID, ...).
+    dcp_local_data_dir: str = "/data"
+    dcp_s3_endpoint_url: str | None = None
+    dcp_check_max_records: int = 5_000_000
 
     @field_validator("dcp_secret_key")
     @classmethod

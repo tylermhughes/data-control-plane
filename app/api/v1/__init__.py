@@ -11,6 +11,7 @@ from app.api.v1 import (
     datasets,
     me,
     projects,
+    quality,
     reports,
     requests,
     specs,
@@ -34,3 +35,4 @@ router.include_router(datasets.router)
 router.include_router(datasets.versions)
 router.include_router(datasets.evals)
 router.include_router(reports.router)
+router.include_router(quality.router)

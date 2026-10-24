@@ -206,8 +206,15 @@ class CoverageAttribute(BaseModel):
 class Coverage(BaseModel):
     spec_version_id: str
     tolerance: float = Field(examples=[0.05])
-    accepted_count: int = Field(description="Accepted items in the batches considered.")
+    accepted_count: int = Field(
+        description="Accepted items in the batches considered (for a single undecided batch: 0)."
+    )
     batch_ids: list[str]
+    counts_from: dict[str, str] = Field(
+        description="Per batch: `files` (counted by DCP's checks), `reported` (by the source) "
+        "or `none`.",
+        examples=[{"bat_01m5n7gwqfa18zhpw1zwh7w2zy": "files"}],
+    )
     attributes: list[CoverageAttribute]
     gaps: list[str] = Field(
         description="Short summaries of every value below target.",

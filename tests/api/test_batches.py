@@ -19,7 +19,7 @@ def test_register_a_delivery(client: TestClient, admin: Headers) -> None:
         artifacts=[{"uri": "s3://intake/surge/b1.jsonl", "format": "jsonl", "record_count": 1000}],
     )
     assert batch["id"].startswith("bat_")
-    assert batch["status"] == "received"
+    assert batch["status"] == "checking"  # it lists a file, so automated checks start
     assert batch["currency"] == "USD"  # the allocation's
     assert batch["spec_version_id"] == s.v1
     assert batch["request_id"] == alloc["request_id"]

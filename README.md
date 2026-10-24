@@ -46,6 +46,12 @@ portfolio (built-in Python 3.9+, nothing to install):
 DCP_API_KEY=dcp_... python3 scripts/demo.py
 ```
 
+## Quality checks on delivered files
+
+When a batch lists files, the worker checks them automatically: format, schema, duplicates, stats,
+attribute counts and the spec's acceptance rules. Local files go in `./data` and are referenced as
+`file:///data/...`. For S3, set the AWS settings in `.env` (see `.env.example`).
+
 ## Try webhooks locally
 
 `scripts/webhook_receiver.py` prints every webhook it receives and checks its signature:

@@ -17,8 +17,9 @@ from app.errors import Conflict, Invalid
 from app.ids import new_id
 from app.models import Allocation, Batch, SpecVersion
 from app.models.base import utcnow
+from app.models.batch import UNDECIDED
 from app.schemas import batches as schemas
-from app.services import events, scoped
+from app.services import events, quality, scoped
 from app.services.principal import Principal
 
 LABEL = "batch"
@@ -165,6 +166,7 @@ def create_batch(
         spend=body.spend,
         currency=currency,
         artifacts=[a.model_dump(mode="json") for a in body.artifacts],
+        reported_metrics=body.reported_metrics,
         notes=body.notes,
         external_ref=body.external_ref,
         external_url=body.external_url,
@@ -176,6 +178,8 @@ def create_batch(
         _apply_external_decision(batch, decision)
         session.flush()
         _emit(session, f"batch.{batch.status}", batch, actor)
+    if batch.artifacts:
+        quality.queue_checks(session, batch, trigger="auto")
     return batch, True
 
 
@@ -215,6 +219,7 @@ def _reimport(
     batch.spend = body.spend
     batch.contributor_count = body.contributor_count
     batch.artifacts = [a.model_dump(mode="json") for a in body.artifacts]
+    batch.reported_metrics = body.reported_metrics
     batch.notes = body.notes
     batch.external_url = body.external_url
     if body.received_at:
@@ -234,6 +239,8 @@ def _reimport(
         return batch
     session.flush()
     _emit(session, "batch.reimported", batch, actor, extra={"changes": changes})
+    if "artifacts" in changes and batch.artifacts and batch.status != "checking":
+        quality.queue_checks(session, batch, trigger="auto")
     return batch
 
 
@@ -246,17 +253,22 @@ def update_batch(
     batch = get_batch(session, actor, batch_id)
     actor.require_write()
     changes = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
-    if batch.status != "received":
+    if batch.status == "checking":
+        raise Conflict("Checks are running on this batch. Try again when they finish.")
+    if batch.status not in UNDECIDED:
         frozen = sorted(set(changes) - {"notes"})
         if frozen:
             raise Conflict(
                 f"This batch is {batch.status}, so only notes can change (not {', '.join(frozen)})."
             )
-    if "artifacts" in changes:
+    files_changed = "artifacts" in changes
+    if files_changed:
         changes["artifacts"] = [a.model_dump(mode="json") for a in body.artifacts or []]
     scoped.apply_changes(batch, changes)
     session.flush()
     _emit(session, "batch.updated", batch, actor)
+    if files_changed and batch.artifacts:
+        quality.queue_checks(session, batch, trigger="auto")
     return batch
 
 
@@ -264,9 +276,14 @@ def accept_batch(
     session: Session, actor: Principal, batch_id: str, body: schemas.BatchAccept
 ) -> Batch:
     batch = _undecided(session, actor, batch_id)
+    if batch.status == "failed" and not body.override_reason:
+        raise Conflict(
+            "This batch failed its checks. To accept it anyway, give an override_reason."
+        )
     check_counts(
         batch.spec_version, batch.delivered_count, body.accepted_count, body.attribute_counts
     )
+    batch.override_reason = body.override_reason if batch.status == "failed" else None
     batch.status = "accepted"
     batch.accepted_count = body.accepted_count
     batch.attribute_counts = body.attribute_counts or {}
@@ -292,8 +309,8 @@ def reject_batch(
 def delete_batch(session: Session, actor: Principal, batch_id: str) -> None:
     batch = get_batch(session, actor, batch_id)
     actor.require_write()
-    if batch.status != "received":
-        raise Conflict(f"This batch is {batch.status}; decided batches can't be deleted.")
+    if batch.status not in UNDECIDED:
+        raise Conflict(f"This batch is {batch.status}; only undecided batches can be deleted.")
     _emit(session, "batch.deleted", batch, actor)
     session.delete(batch)
     session.flush()
@@ -302,7 +319,9 @@ def delete_batch(session: Session, actor: Principal, batch_id: str) -> None:
 def _undecided(session: Session, actor: Principal, batch_id: str) -> Batch:
     batch = get_batch(session, actor, batch_id)
     actor.require_write()
-    if batch.status != "received":
+    if batch.status == "checking":
+        raise Conflict("Checks are still running on this batch. Decide when they finish.")
+    if batch.status not in UNDECIDED:
         raise Conflict(f"This batch is already {batch.status}.")
     return batch
 

@@ -11,5 +11,9 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
+# Local delivery files for quality checks (keep the folder, not its contents)
+data/*
+!data/.gitkeep
+
 # macOS
 .DS_Store

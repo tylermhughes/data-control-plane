@@ -11,15 +11,18 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, InProject, utcnow
+from app.models.quality import QualityRun
 from app.models.request import Allocation
 from app.models.spec import SpecVersion
 
-BATCH_STATUSES = ("received", "accepted", "rejected")
+BATCH_STATUSES = ("received", "checking", "passed", "failed", "accepted", "rejected")
+UNDECIDED = frozenset({"received", "passed", "failed"})  # checking is "busy", not undecided
 
 
 class Batch(InProject, Base):
@@ -32,7 +35,10 @@ class Batch(InProject, Base):
 
     __tablename__ = "batches"
     __table_args__ = (
-        CheckConstraint("status IN ('received', 'accepted', 'rejected')", name="status"),
+        CheckConstraint(
+            "status IN ('received', 'checking', 'passed', 'failed', 'accepted', 'rejected')",
+            name="status",
+        ),
         CheckConstraint("decision_source IN ('dcp', 'external')", name="decision_source"),
         CheckConstraint("delivered_count >= 0", name="delivered_not_negative"),
         CheckConstraint(
@@ -60,6 +66,11 @@ class Batch(InProject, Base):
     spend: Mapped[Decimal] = mapped_column(Numeric(14, 4))
     currency: Mapped[str] = mapped_column(String(3))
     attribute_counts: Mapped[dict[str, dict[str, int]]] = mapped_column(JSONB, default=dict)
+    # Values DCP can't measure from files (e.g. rater agreement), reported by the source.
+    reported_metrics: Mapped[dict[str, float]] = mapped_column(
+        JSONB, default=dict, server_default=text("'{}'::jsonb")
+    )
+    override_reason: Mapped[str | None] = mapped_column(Text)
     artifacts: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     notes: Mapped[str] = mapped_column(Text, default="")
     decision_source: Mapped[str | None] = mapped_column(String(16))
@@ -72,6 +83,27 @@ class Batch(InProject, Base):
 
     allocation: Mapped[Allocation] = relationship(back_populates="batches")
     spec_version: Mapped[SpecVersion] = relationship()
+    quality_runs: Mapped[list[QualityRun]] = relationship(
+        order_by="QualityRun.id", passive_deletes=True
+    )
+
+    @property
+    def latest_quality_run(self) -> QualityRun | None:
+        return self.quality_runs[-1] if self.quality_runs else None
+
+    @property
+    def quality(self) -> dict[str, Any] | None:
+        """The latest quality run in brief (the API's `quality` field)."""
+        run = self.latest_quality_run
+        if run is None:
+            return None
+        return {
+            "run_id": run.id,
+            "status": run.status,
+            "failed_checks": [c["name"] for c in run.checks if c["outcome"] == "failed"],
+            "warnings": [c["name"] for c in run.checks if c["outcome"] == "warning"],
+            "finished_at": run.finished_at,
+        }
 
     @property
     def request_id(self) -> str:

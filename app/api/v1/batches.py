@@ -17,7 +17,8 @@ from app.schemas.batches import (
 )
 from app.schemas.common import Page
 from app.schemas.datasets import Coverage
-from app.services import batches, coverage
+from app.schemas.quality import QualityRun
+from app.services import batches, coverage, quality
 
 router = APIRouter(prefix="/batches", tags=["batches"])
 
@@ -108,7 +109,8 @@ def delete_batch(batch_id: str, session: SessionDep, principal: PrincipalDep) ->
 def accept_batch(
     batch_id: str, body: BatchAccept, session: SessionDep, principal: PrincipalDep
 ) -> Batch:
-    """Received → accepted, keeping `accepted_count` of the delivered items. Optional
+    """Received, passed or failed → accepted, keeping `accepted_count` of the delivered items.
+    A batch that **failed** its checks needs an `override_reason`. Not while checks run. Optional
     `attribute_counts` must use the spec version's attributes and can't exceed the accepted
     count for any attribute. Final: afterwards only notes can change."""
     out = Batch.model_validate(batches.accept_batch(session, principal, batch_id, body))
@@ -120,7 +122,8 @@ def accept_batch(
 def reject_batch(
     batch_id: str, body: BatchReject, session: SessionDep, principal: PrincipalDep
 ) -> Batch:
-    """Received → rejected, with a reason. Final: afterwards only notes can change."""
+    """Received, passed or failed → rejected, with a reason. Not while checks run. Final:
+    afterwards only notes can change."""
     out = Batch.model_validate(batches.reject_batch(session, principal, batch_id, body))
     session.commit()
     return out
@@ -132,3 +135,30 @@ def get_coverage(batch_id: str, session: SessionDep, principal: PrincipalDep) ->
     targets. Values more than the spec's tolerance below target are `below` and listed in
     `gaps`. Uses the batch's `attribute_counts`, so it's empty if none were recorded."""
     return coverage.for_batch(session, principal, batch_id)
+
+
+@router.post(
+    "/{batch_id}/checks",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Run the automated checks again",
+    responses=WRITE_ERRORS,
+)
+def request_checks(batch_id: str, session: SessionDep, principal: PrincipalDep) -> QualityRun:
+    """Checks run automatically when a batch with files arrives; use this to run them again
+    (e.g. after a file was fixed). Undecided batches move to `checking`, then `passed` or
+    `failed`. Decided batches keep their decision; the run only adds findings."""
+    out = QualityRun.model_validate(quality.request_checks(session, principal, batch_id))
+    session.commit()
+    return out
+
+
+@router.get("/{batch_id}/quality-runs", summary="Check runs on this batch", responses=READ_ERRORS)
+def list_quality_runs(
+    batch_id: str,
+    session: SessionDep,
+    principal: PrincipalDep,
+    limit: Limit = 50,
+    cursor: Cursor = None,
+) -> Page[QualityRun]:
+    rows, next_cursor = quality.list_runs(session, principal, batch_id, limit=limit, cursor=cursor)
+    return Page(data=[QualityRun.model_validate(r) for r in rows], next_cursor=next_cursor)

@@ -9,6 +9,7 @@ from app.models.dataset import Dataset, DatasetVersion, EvalResult
 from app.models.event import Event
 from app.models.idempotency import IdempotencyRecord
 from app.models.project import Project
+from app.models.quality import Job, QualityRun, RecordFingerprint
 from app.models.request import Allocation, Request
 from app.models.spec import Spec, SpecVersion
 from app.models.webhook import WebhookDelivery, WebhookEndpoint
@@ -25,7 +26,10 @@ __all__ = [
     "EvalResult",
     "Event",
     "IdempotencyRecord",
+    "Job",
     "Project",
+    "QualityRun",
+    "RecordFingerprint",
     "Request",
     "Spec",
     "SpecVersion",

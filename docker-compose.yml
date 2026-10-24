@@ -38,7 +38,16 @@ services:
   worker:
     build: .
     command: ["python", "-m", "app.worker"]
-    environment: *app-env
+    environment:
+      <<: *app-env
+      DCP_LOCAL_DATA_DIR: /data
+      DCP_S3_ENDPOINT_URL: ${DCP_S3_ENDPOINT_URL:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+    # Local files for quality checks: ./data on this machine is file:///data/... to DCP.
+    volumes:
+      - ./data:/data:ro
     # Lets webhooks reach a receiver on the host machine (built in on Docker Desktop).
     extra_hosts:
       - "host.docker.internal:host-gateway"

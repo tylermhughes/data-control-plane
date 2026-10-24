@@ -1,8 +1,11 @@
+from pathlib import Path
 from typing import Any
 
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
-from tests.helpers import Headers, Setup, post_ok
+from app.worker.__main__ import run_once
+from tests.helpers import Headers, Setup, post_ok, write_jsonl
 
 
 def accepted_batch(s: Setup, alloc_id: str, accepted: int = 900, **extra: Any) -> Any:
@@ -117,18 +120,23 @@ def test_baseline_must_be_for_the_same_capability(client: TestClient, admin: Hea
     assert response.status_code == 422
 
 
-def test_manifest_lists_every_file(client: TestClient, admin: Headers) -> None:
+def test_manifest_lists_every_file(
+    client: TestClient, admin: Headers, data_dir: Path, db: Session
+) -> None:
     s = Setup(client, admin)
     alloc = s.active_allocation()
+    rows = [{"id": f"r{i}", "package_type": "box", "zone": "induct"} for i in range(500)]
     files = [
-        {"uri": "s3://intake/a/1.jsonl", "format": "jsonl", "record_count": 500},
-        {"uri": "s3://intake/a/2.jsonl", "format": "jsonl", "record_count": 500},
+        {"uri": write_jsonl(data_dir / s.project_id / f"{n}.jsonl", rows), "format": "jsonl"}
+        for n in (1, 2)
     ]
-    a = accepted_batch(s, alloc["id"], artifacts=files)
+    batch = s.batch(alloc["id"], artifacts=files)
+    run_once(db)  # automated checks
+    a = post_ok(client, f"/v1/batches/{batch['id']}/accept", admin, {"accepted_count": 900})
     v1 = version(s, dataset(s)["id"], batch_ids=[a["id"]])
     manifest = client.get(f"/v1/dataset-versions/{v1['id']}/manifest", headers=admin).json()
     assert (manifest["batch_count"], manifest["file_count"]) == (1, 2)
-    assert manifest["files"][0]["uri"] == "s3://intake/a/1.jsonl"
+    assert manifest["files"][0]["uri"].endswith("/1.jsonl")
     assert manifest["files"][0]["source_kind"] == "human_vendor"
     assert manifest["files"][0]["spec_version_id"] == s.v1
 

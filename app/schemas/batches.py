@@ -4,11 +4,19 @@ from typing import Any, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.common import Currency, Money, MoneyOut
+from app.schemas.quality import QualitySummary
 
-BatchStatus = Literal["received", "accepted", "rejected"]
+BatchStatus = Literal["received", "checking", "passed", "failed", "accepted", "rejected"]
 DecisionSource = Literal["dcp", "external"]
 Count = Field(ge=0, le=1_000_000_000)
 AttributeCounts = dict[str, dict[str, int]]
+ReportedMetrics: Any = Field(
+    default_factory=dict,
+    description="Values DCP can't measure from the files, reported by the source, e.g. "
+    '{"agreement": 0.91} or {"agreement[package_type=shrink_wrapped]": 0.84}. Used by '
+    "acceptance rules; measured values win over reported ones.",
+    examples=[{"agreement": 0.91}],
+)
 
 
 class Artifact(BaseModel):
@@ -101,7 +109,12 @@ class BatchCreate(BaseModel):
     spend: Money = Field(description="What this delivery cost.")
     currency: Currency | None = Field(None, description="Defaults to the allocation's currency.")
     contributor_count: int | None = Field(None, ge=0, description="People who worked on it.")
-    artifacts: list[Artifact] = Field(default_factory=list, max_length=1000)
+    artifacts: list[Artifact] = Field(
+        default_factory=list,
+        max_length=1000,
+        description="Delivered files. If any are listed, DCP checks them automatically.",
+    )
+    reported_metrics: dict[str, float] = ReportedMetrics
     notes: str = Field("", max_length=10_000)
     external_ref: str | None = Field(
         None,
@@ -117,7 +130,8 @@ class BatchCreate(BaseModel):
 
 
 class BatchUpdate(BaseModel):
-    """Undecided batches: any field. Accepted or rejected batches: notes only."""
+    """Undecided batches (received, passed, failed): any field; changing `artifacts` re-runs the
+    checks. While checks run: nothing. Accepted or rejected batches: notes only."""
 
     model_config = ConfigDict(
         extra="forbid",
@@ -129,6 +143,7 @@ class BatchUpdate(BaseModel):
     spend: Money | None = None
     contributor_count: int | None = Field(None, ge=0)
     artifacts: list[Artifact] | None = Field(None, max_length=1000)
+    reported_metrics: dict[str, float] | None = None
     notes: str | None = Field(None, max_length=10_000)
     external_url: str | None = Field(None, max_length=2000)
 
@@ -156,6 +171,12 @@ class BatchAccept(BaseModel):
         '{"package_type": {"shrink_wrapped": 3300}}. Optional.',
     )
     decided_by: str = Field("", max_length=200, description="Who decided.")
+    override_reason: str | None = Field(
+        None,
+        min_length=1,
+        max_length=10_000,
+        description="Required to accept a batch whose checks failed: why it's accepted anyway.",
+    )
 
 
 class BatchReject(BaseModel):
@@ -192,8 +213,13 @@ class Batch(BaseModel):
     contributor_count: int | None = Field(examples=[46])
     spend: MoneyOut = Field(examples=["18600.00"])
     currency: str = Field(examples=["USD"])
-    attribute_counts: AttributeCounts
+    attribute_counts: AttributeCounts = Field(
+        description="As reported (see `quality` for counts from the files)."
+    )
     artifacts: list[Artifact]
+    reported_metrics: dict[str, float]
+    quality: QualitySummary | None = Field(description="The latest automated check run.")
+    override_reason: str | None = Field(description="Why a failed batch was accepted anyway.")
     notes: str
     decision_source: DecisionSource | None = Field(
         description="`dcp` if decided here, `external` if imported already decided."

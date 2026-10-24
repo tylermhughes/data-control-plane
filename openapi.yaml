@@ -3278,6 +3278,9 @@ paths:
           anyOf:
           - enum:
             - received
+            - checking
+            - passed
+            - failed
             - accepted
             - rejected
             type: string
@@ -3611,8 +3614,11 @@ paths:
       tags:
       - batches
       summary: Accept a batch
-      description: 'Received → accepted, keeping `accepted_count` of the delivered
-        items. Optional
+      description: 'Received, passed or failed → accepted, keeping `accepted_count`
+        of the delivered items.
+
+        A batch that **failed** its checks needs an `override_reason`. Not while checks
+        run. Optional
 
         `attribute_counts` must use the spec version''s attributes and can''t exceed
         the accepted
@@ -3681,8 +3687,10 @@ paths:
       tags:
       - batches
       summary: Reject a batch
-      description: 'Received → rejected, with a reason. Final: afterwards only notes
-        can change.'
+      description: 'Received, passed or failed → rejected, with a reason. Not while
+        checks run. Final:
+
+        afterwards only notes can change.'
       operationId: reject_batch_v1_batches__batch_id__reject_post
       security:
       - ApiKey: []
@@ -3771,6 +3779,141 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Coverage'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/batches/{batch_id}/checks:
+    post:
+      tags:
+      - batches
+      summary: Run the automated checks again
+      description: 'Checks run automatically when a batch with files arrives; use
+        this to run them again
+
+        (e.g. after a file was fixed). Undecided batches move to `checking`, then
+        `passed` or
+
+        `failed`. Decided batches keep their decision; the run only adds findings.'
+      operationId: request_checks_v1_batches__batch_id__checks_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Batch Id
+      responses:
+        '202':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QualityRun'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/batches/{batch_id}/quality-runs:
+    get:
+      tags:
+      - batches
+      summary: Check runs on this batch
+      operationId: list_quality_runs_v1_batches__batch_id__quality_runs_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Batch Id
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_QualityRun_'
         '401':
           content:
             application/problem+json: {}
@@ -5707,6 +5850,60 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Unprocessable Entity
+  /v1/quality-runs/{run_id}:
+    get:
+      tags:
+      - batches
+      summary: Get a quality run
+      description: 'Every check''s outcome, a plain-language summary, examples of
+        problems, and the
+
+        measured metrics that acceptance rules use.'
+      operationId: get_run_v1_quality_runs__run_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QualityRun'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
 components:
   schemas:
     AcceptanceRule:
@@ -6425,6 +6622,9 @@ components:
           type: string
           enum:
           - received
+          - checking
+          - passed
+          - failed
           - accepted
           - rejected
           title: Status
@@ -6473,11 +6673,28 @@ components:
             type: object
           type: object
           title: Attribute Counts
+          description: As reported (see `quality` for counts from the files).
         artifacts:
           items:
             $ref: '#/components/schemas/Artifact'
           type: array
           title: Artifacts
+        reported_metrics:
+          additionalProperties:
+            type: number
+          type: object
+          title: Reported Metrics
+        quality:
+          anyOf:
+          - $ref: '#/components/schemas/QualitySummary'
+          - type: 'null'
+          description: The latest automated check run.
+        override_reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Override Reason
+          description: Why a failed batch was accepted anyway.
         notes:
           type: string
           title: Notes
@@ -6551,6 +6768,9 @@ components:
       - currency
       - attribute_counts
       - artifacts
+      - reported_metrics
+      - quality
+      - override_reason
       - notes
       - decision_source
       - decided_by
@@ -6586,6 +6806,15 @@ components:
           title: Decided By
           description: Who decided.
           default: ''
+        override_reason:
+          anyOf:
+          - type: string
+            maxLength: 10000
+            minLength: 1
+          - type: 'null'
+          title: Override Reason
+          description: 'Required to accept a batch whose checks failed: why it''s
+            accepted anyway.'
       additionalProperties: false
       type: object
       required:
@@ -6648,6 +6877,17 @@ components:
           type: array
           maxItems: 1000
           title: Artifacts
+          description: Delivered files. If any are listed, DCP checks them automatically.
+        reported_metrics:
+          additionalProperties:
+            type: number
+          type: object
+          title: Reported Metrics
+          description: 'Values DCP can''t measure from the files, reported by the
+            source, e.g. {"agreement": 0.91} or {"agreement[package_type=shrink_wrapped]":
+            0.84}. Used by acceptance rules; measured values win over reported ones.'
+          examples:
+          - agreement: 0.91
         notes:
           type: string
           maxLength: 10000
@@ -6767,6 +7007,13 @@ components:
             maxItems: 1000
           - type: 'null'
           title: Artifacts
+        reported_metrics:
+          anyOf:
+          - additionalProperties:
+              type: number
+            type: object
+          - type: 'null'
+          title: Reported Metrics
         notes:
           anyOf:
           - type: string
@@ -6782,8 +7029,10 @@ components:
       additionalProperties: false
       type: object
       title: BatchUpdate
-      description: 'Undecided batches: any field. Accepted or rejected batches: notes
-        only.'
+      description: 'Undecided batches (received, passed, failed): any field; changing
+        `artifacts` re-runs the
+
+        checks. While checks run: nothing. Accepted or rejected batches: notes only.'
       examples:
       - delivered_count: 12040
         notes: 40 late items.
@@ -7108,6 +7357,44 @@ components:
         another project.
       examples:
       - value_per_point: '30000.00'
+    Check:
+      properties:
+        name:
+          type: string
+          enum:
+          - files
+          - format
+          - schema
+          - duplicates
+          - stats
+          - attribute_counts
+          - acceptance_rules
+          title: Name
+        outcome:
+          type: string
+          enum:
+          - passed
+          - warning
+          - failed
+          - skipped
+          title: Outcome
+        summary:
+          type: string
+          title: Summary
+          examples:
+          - 37 of 4,000 records don't match the record format.
+        details:
+          additionalProperties: true
+          type: object
+          title: Details
+          description: Examples, per-file results, rule results, ...
+      type: object
+      required:
+      - name
+      - outcome
+      - summary
+      - details
+      title: Check
     Coverage:
       properties:
         spec_version_id:
@@ -7121,12 +7408,22 @@ components:
         accepted_count:
           type: integer
           title: Accepted Count
-          description: Accepted items in the batches considered.
+          description: 'Accepted items in the batches considered (for a single undecided
+            batch: 0).'
         batch_ids:
           items:
             type: string
           type: array
           title: Batch Ids
+        counts_from:
+          additionalProperties:
+            type: string
+          type: object
+          title: Counts From
+          description: 'Per batch: `files` (counted by DCP''s checks), `reported`
+            (by the source) or `none`.'
+          examples:
+          - bat_01m5n7gwqfa18zhpw1zwh7w2zy: files
         attributes:
           items:
             $ref: '#/components/schemas/CoverageAttribute'
@@ -7146,6 +7443,7 @@ components:
       - tolerance
       - accepted_count
       - batch_ids
+      - counts_from
       - attributes
       - gaps
       title: Coverage
@@ -8206,6 +8504,24 @@ components:
       - data
       - next_cursor
       title: Page[Project]
+    Page_QualityRun_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/QualityRun'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[QualityRun]
     Page_Request_:
       properties:
         data:
@@ -8454,6 +8770,139 @@ components:
       description: Only the fields you send are changed.
       examples:
       - name: Fulfillment CV
+    QualityRun:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - qrn_01m5n7gwqfa18zhpw1zwh7w2zy
+        project_id:
+          type: string
+          title: Project Id
+        batch_id:
+          type: string
+          title: Batch Id
+        status:
+          type: string
+          enum:
+          - queued
+          - running
+          - passed
+          - failed
+          - error
+          title: Status
+          description: '`failed` if any check failed; `error` if the checks couldn''t
+            run.'
+        trigger:
+          type: string
+          enum:
+          - auto
+          - manual
+          title: Trigger
+        started_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Started At
+        finished_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Finished At
+        checks:
+          items:
+            $ref: '#/components/schemas/Check'
+          type: array
+          title: Checks
+        metrics:
+          additionalProperties: true
+          type: object
+          title: Metrics
+          description: 'Measured values, usable in acceptance rules: record_count,
+            parse_error_rate, schema_valid_rate, duplicate_rate, duplicates_in_batch,
+            duplicates_in_project, empty_rate.<field>.'
+          examples:
+          - duplicate_rate: 0.0125
+            record_count: 4000
+            schema_valid_rate: 0.9991
+        attribute_counts:
+          additionalProperties:
+            additionalProperties:
+              type: integer
+            type: object
+          type: object
+          title: Attribute Counts
+          description: Counted from the records in the files (all delivered records).
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - project_id
+      - batch_id
+      - status
+      - trigger
+      - started_at
+      - finished_at
+      - checks
+      - metrics
+      - attribute_counts
+      - error
+      - created_at
+      title: QualityRun
+    QualitySummary:
+      properties:
+        run_id:
+          type: string
+          title: Run Id
+        status:
+          type: string
+          enum:
+          - queued
+          - running
+          - passed
+          - failed
+          - error
+          title: Status
+        failed_checks:
+          items:
+            type: string
+          type: array
+          title: Failed Checks
+          examples:
+          - - acceptance_rules
+        warnings:
+          items:
+            type: string
+          type: array
+          title: Warnings
+          examples:
+          - - duplicates
+        finished_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Finished At
+      type: object
+      required:
+      - run_id
+      - status
+      - failed_checks
+      - warnings
+      - finished_at
+      title: QualitySummary
+      description: The latest quality run on a batch, in brief.
     Readiness:
       properties:
         status:

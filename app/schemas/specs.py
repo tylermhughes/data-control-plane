@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Any, Literal, Self
 
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.common import Description, ProjectIdIn
@@ -88,6 +90,13 @@ class SpecContent(BaseModel):
     @model_validator(mode="after")
     def cross_check(self) -> Self:
         check_content(self.attributes, self.coverage_targets, self.acceptance_rules)
+        if self.record_schema is not None:
+            try:
+                Draft202012Validator.check_schema(self.record_schema)
+            except SchemaError as exc:
+                raise ValueError(
+                    f"record_schema isn't a valid JSON Schema: {exc.message}"
+                ) from None
         return self
 
 
