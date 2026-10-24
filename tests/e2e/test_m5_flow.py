@@ -66,3 +66,33 @@ def test_north_star_demo(client: TestClient, admin: Headers, data_dir: Path, db:
     assert "no value for agreement" in text
     assert "Surge batch gaps: ['package_type=shrink_wrapped: 29% vs 35% target']" in text
     assert "Whole request gaps: none (within tolerance)" in text
+
+
+def test_north_star_demo_with_diagnosis(
+    client: TestClient, admin: Headers, data_dir: Path, db: Session
+) -> None:
+    demo = load_demo()
+
+    def api(method: str, path: str, body: Any = None) -> Any:
+        run_once(db)
+        response = client.request(method, path, json=body, headers=admin)
+        assert response.status_code < 400, f"{method} {path}: {response.text}"
+        return response.json() if response.content else None
+
+    lines: list[str] = []
+    result = demo.run(
+        api,
+        webhook_port=None,
+        say=lines.append,
+        data_dir=data_dir,
+        uri_root=str(data_dir),
+        diagnosis=True,
+    )
+    diag = result["diagnosis"]["diagnosis"]
+    assert [v["points_per_10k"] for v in diag["versions"]] == [6.25, 0.8602]  # 0.4 pts / 4,650
+    assert (diag["trend"], diag["recommendation"]) == ("flattening", "refine_spec")
+    assert "shrink_wrapped" in diag["summary"]
+    assert any("Drafted spec version 2" in line for line in lines)
+    plan = {x["name"]: x for x in result["diagnosis"]["plan"]["suggestions"]}
+    assert set(plan) == {"Surge", "Mercor", "Returns photos"}
+    assert plan["Returns photos"]["expected_usable"] > plan["Mercor"]["expected_usable"]  # cheapest

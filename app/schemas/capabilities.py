@@ -35,6 +35,13 @@ class CapabilityCreate(BaseModel):
         description="How much of the metric is one point. Use 0.01 for a 0–1 metric such as "
         "recall, so 0.812 → 0.857 is 4.5 points. Default 1: one unit as recorded.",
     )
+    flattening_threshold: float = Field(
+        0.5,
+        gt=0,
+        le=1,
+        description="The diagnosis calls returns 'flattening' when the latest dataset "
+        "version's points per 10K fall below this share of the earlier versions' average.",
+    )
     currency: Currency
 
 
@@ -51,6 +58,7 @@ class CapabilityUpdate(BaseModel):
     higher_is_better: bool | None = None
     value_per_point: Money | None = None
     point_size: float | None = Field(None, gt=0)
+    flattening_threshold: float | None = Field(None, gt=0, le=1)
     currency: Currency | None = None
 
 
@@ -65,6 +73,7 @@ class Capability(BaseModel):
     higher_is_better: bool
     value_per_point: MoneyOut
     point_size: float = Field(examples=[0.01])
+    flattening_threshold: float = Field(examples=[0.5])
     currency: str = Field(examples=["USD"])
     created_at: datetime
     updated_at: datetime

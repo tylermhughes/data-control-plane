@@ -10,6 +10,8 @@ It creates a fresh project and runs the whole loop:
   4. two dataset versions with eval results
   5. the portfolio: spend, cost per usable unit, eval change and points per $10K
   6. signed webhooks for every step, received and checked by this script
+  7. (with --diagnosis) a third delivery that barely helps: the diagnosis says returns are
+     flattening and the data mix is off, drafts a refined spec, and plans the next request
 
 Options: DCP_URL (default http://localhost:8000), --no-webhooks, --port (default 9000).
 Delivery files are written to ./data (which DCP sees as /data); see --data-dir.
@@ -169,6 +171,72 @@ def money(value: str) -> str:
     return f"${float(value):,.2f}"
 
 
+def run_diagnosis(
+    api: Api,
+    say: Any,
+    files: Files,
+    capability_id: str,
+    spec_version_id: str,
+    dataset_id: str,
+    previous_version_id: str,
+    allocs: dict[str, Any],
+) -> dict[str, Any]:
+    say("\n7. Diagnosis: is the spend still paying off?")
+    records = make_records("surge2", {"box": 2400, "mailer": 450, "shrink_wrapped": 150})
+    batch = api(
+        "POST",
+        "/v1/batches",
+        {
+            "allocation_id": allocs["Surge"]["id"],
+            "artifacts": [files.write("surge-2.jsonl", records)],
+            "delivered_count": 3000,
+            "spend": "4650",
+            "reported_metrics": {"agreement": 0.9},
+        },
+    )
+    batch = wait_for_checks(api, batch["id"])
+    api("POST", f"/v1/batches/{batch['id']}/accept", {"accepted_count": 2900})
+    v3 = api(
+        "POST",
+        f"/v1/datasets/{dataset_id}/versions",
+        {"batch_ids": [batch["id"]], "baseline_version_id": previous_version_id},
+    )
+    api("POST", "/v1/eval-results", {"dataset_version_id": v3["id"], "value": 0.861})
+    say("   Surge delivered 3,000 more (mostly boxes); v3 moved recall only 0.857 -> 0.861")
+
+    diag = api("GET", f"/v1/capabilities/{capability_id}/diagnosis")
+    for v in diag["versions"]:
+        say(f"   v{v['version']}: +{v['points']} points, {v['points_per_10k']} points per $10K")
+    say(f"   Trend: {diag['trend']} -> recommendation: {diag['recommendation']}")
+    say(f"   {diag['summary']}")
+    if diag["suggested_spec_change"]:
+        targets = diag["suggested_spec_change"]["coverage_targets"]
+        say(f"   Suggested coverage targets: {targets}")
+        draft = api("POST", f"/v1/capabilities/{capability_id}/diagnosis/draft-spec", {})
+        say(f"   Drafted spec version {draft['version']} for review (not approved).")
+
+    req = api(
+        "POST",
+        "/v1/requests",
+        {
+            "capability_id": capability_id,
+            "title": "Next round",
+            "quantity": 6000,
+            "unit": "images",
+            "spec_version_id": spec_version_id,
+        },
+    )
+    plan = api("GET", f"/v1/requests/{req['id']}/allocation-plan")
+    say("   Suggested split for the next 6,000 images:")
+    for x in plan["suggestions"]:
+        cost = money(x["expected_cost"]) if x["expected_cost"] else "?"
+        say(
+            f"     {x['name']:<15} {x['role']:<6} {x['expected_usable']:>5,} usable "
+            f"(order {x['order_quantity']:,}, ~{cost})"
+        )
+    return {"diagnosis": diag, "plan": plan}
+
+
 def run(
     api: Api,
     *,
@@ -176,6 +244,7 @@ def run(
     say: Any = print,
     data_dir: Path | None = None,
     uri_root: str = "/data",
+    diagnosis: bool = False,
 ) -> dict[str, Any]:
     """Runs the north star. Returns the portfolio and webhook counts (used by the tests)."""
     files = Files(
@@ -465,8 +534,14 @@ def run(
                     "incoming connections?"
                 )
 
+        diag = None
+        if diagnosis:  # after the webhook check, so step 6 counts only steps 1-5
+            diag = run_diagnosis(
+                api, say, files, cap["id"], v1["id"], dataset["id"], ds_v2["id"], allocs
+            )
+
         say(f"\nDone. Project {pid}: explore it at /docs.")
-        return {"project_id": pid, "portfolio": report, "webhooks": dict(counts)}
+        return {"project_id": pid, "portfolio": report, "webhooks": dict(counts), "diagnosis": diag}
     finally:
         if endpoint:
             api("DELETE", f"/v1/webhook-endpoints/{endpoint['id']}")
@@ -477,6 +552,9 @@ def run(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the DCP north-star demo.")
     parser.add_argument("--no-webhooks", action="store_true", help="Skip step 6.")
+    parser.add_argument(
+        "--diagnosis", action="store_true", help="Add step 7: the diagnosis and a plan."
+    )
     parser.add_argument("--port", type=int, default=9000, help="Port for receiving webhooks.")
     parser.add_argument(
         "--data-dir",
@@ -493,7 +571,12 @@ def main() -> int:
         return 2
     api = http_api(os.environ.get("DCP_URL", "http://localhost:8000"), key)
     try:
-        run(api, webhook_port=None if args.no_webhooks else args.port, data_dir=args.data_dir)
+        run(
+            api,
+            webhook_port=None if args.no_webhooks else args.port,
+            data_dir=args.data_dir,
+            diagnosis=args.diagnosis,
+        )
     except DemoError as exc:
         print(f"\nStopped: {exc}")
         return 1

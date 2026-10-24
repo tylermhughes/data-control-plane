@@ -17,4 +17,9 @@ class Capability(ProjectScoped, Base):
     value_per_point: Mapped[Decimal] = mapped_column(Numeric(14, 4))
     # How much of the metric counts as one "point" (0.01 = one percentage point of a 0-1 metric).
     point_size: Mapped[float] = mapped_column(Float, default=1.0, server_default=text("1"))
+    # Returns are "flattening" when the latest points per 10K fall below this share of the
+    # average of earlier versions (used by the diagnosis).
+    flattening_threshold: Mapped[float] = mapped_column(
+        Float, default=0.5, server_default=text("0.5")
+    )
     currency: Mapped[str] = mapped_column(String(3))

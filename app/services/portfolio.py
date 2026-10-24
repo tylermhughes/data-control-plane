@@ -101,6 +101,25 @@ def _main_result(version: DatasetVersion, metric: str) -> EvalResult | None:
     return max(results, key=lambda r: (r.recorded_at, r.id)) if results else None
 
 
+@dataclass(frozen=True)
+class Score:
+    """A dataset version's eval change against its baseline, in points (positive = better)."""
+
+    points: float
+    current: EvalResult
+    baseline: EvalResult
+
+
+def score(version: DatasetVersion, cap: Capability) -> Score | None:
+    """None unless both the version and its baseline have a main-metric result."""
+    current = _main_result(version, cap.eval_metric)
+    base = _main_result(version.baseline, cap.eval_metric) if version.baseline else None
+    if current is None or base is None:
+        return None
+    sign = 1.0 if current.higher_is_better else -1.0
+    return Score(sign * (current.value - base.value) / cap.point_size, current, base)
+
+
 def _in_window(when: datetime, since: datetime | None, until: datetime | None) -> bool:
     return (since is None or when >= since) and (until is None or when < until)
 
@@ -136,14 +155,12 @@ def build(
         if not _in_window(version.created_at, since, until):
             continue
         cap = caps[version.capability_id]
-        current = _main_result(version, cap.eval_metric)
-        base = _main_result(version.baseline, cap.eval_metric) if version.baseline else None
-        if current is None or base is None:
+        scored = score(version, cap)
+        if scored is None:
             continue
-        sign = 1.0 if current.higher_is_better else -1.0
-        points = sign * (current.value - base.value) / cap.point_size
+        points = scored.points
         added = version.new_batches()
-        eval_ids = (current.id, base.id)
+        eval_ids = (scored.current.id, scored.baseline.id)
 
         cap_tally = by_cap[cap.id]
         cap_tally.add_change(points, version.id, eval_ids)

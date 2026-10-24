@@ -6973,6 +6973,195 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Unprocessable Entity
+  /v1/requests/{request_id}/allocation-plan:
+    get:
+      tags:
+      - recommendations
+      summary: Suggest how to split a request across sources
+      description: 'A suggested split of the request''s remaining units across the
+        project''s sources, from
+
+        their last 90 days: cost per usable unit, accept rate, throughput, what they
+        already owe,
+
+        rights and attribute mix. Untested sources get a small pilot. Each suggestion
+        includes an
+
+        `allocation` ready for `POST /v1/allocations`. Nothing is created until you
+        do that.'
+      operationId: allocation_plan_v1_requests__request_id__allocation_plan_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Request Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllocationPlan'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/capabilities/{capability_id}/diagnosis:
+    get:
+      tags:
+      - recommendations
+      summary: Is the data spend still paying off, and if not, why?
+      description: 'Scores each dataset version (eval change vs its baseline, points
+        per 10K). When the
+
+        latest falls below the capability''s `flattening_threshold` of the earlier
+        average, checks
+
+        the cause before suggesting cuts: a data mix short of the spec''s coverage
+        targets means
+
+        **refine the spec** (with suggested targets). Other causes aren''t checked
+        yet, so without a
+
+        data-mix problem it recommends investigating rather than cutting spend.'
+      operationId: diagnosis_v1_capabilities__capability_id__diagnosis_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: capability_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Capability Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Diagnosis'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/capabilities/{capability_id}/diagnosis/draft-spec:
+    post:
+      tags:
+      - recommendations
+      summary: Draft the suggested spec change
+      description: 'Creates the diagnosis''s suggested coverage targets as a new **draft**
+        version of the
+
+        spec, marked as drafted by DCP. A person reviews, edits and approves it as
+        usual. Refused
+
+        if the diagnosis doesn''t recommend refining the spec, or the spec already
+        has a draft.'
+      operationId: draft_spec_v1_capabilities__capability_id__diagnosis_draft_spec_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: capability_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Capability Id
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecVersion'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
 components:
   schemas:
     AcceptanceRule:
@@ -7292,6 +7481,77 @@ components:
         quantity: 4000
         quoted_unit_rate: '1.55'
         request_id: req_01m5n7gwqfa18zhpw1zwh7w2zy
+    AllocationPlan:
+      properties:
+        request_id:
+          type: string
+          title: Request Id
+        unit:
+          type: string
+          title: Unit
+        requested:
+          type: integer
+          title: Requested
+        already_allocated:
+          type: integer
+          title: Already Allocated
+          description: Planned, active and complete allocations.
+        remaining:
+          type: integer
+          title: Remaining
+          description: Usable units still to plan for.
+        due_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Due Date
+        suggestions:
+          items:
+            $ref: '#/components/schemas/Suggestion'
+          type: array
+          title: Suggestions
+        excluded:
+          items:
+            $ref: '#/components/schemas/Excluded'
+          type: array
+          title: Excluded
+        shortfall:
+          type: integer
+          title: Shortfall
+          description: Usable units no source can deliver by the due date, as far
+            as DCP can tell.
+        coverage_gaps:
+          items:
+            type: string
+          type: array
+          title: Coverage Gaps
+          description: The request's current coverage gaps.
+        method:
+          type: string
+          title: Method
+          description: How the split was made, in plain language.
+          examples:
+          - Shares in proportion to 1 ÷ cost per usable unit, capped by capacity.
+        generated_at:
+          type: string
+          format: date-time
+          title: Generated At
+      type: object
+      required:
+      - request_id
+      - unit
+      - requested
+      - already_allocated
+      - remaining
+      - due_date
+      - suggestions
+      - excluded
+      - shortfall
+      - coverage_gaps
+      - method
+      - generated_at
+      title: AllocationPlan
     AllocationUpdate:
       properties:
         quantity:
@@ -8162,6 +8422,11 @@ components:
           title: Point Size
           examples:
           - 0.01
+        flattening_threshold:
+          type: number
+          title: Flattening Threshold
+          examples:
+          - 0.5
         currency:
           type: string
           title: Currency
@@ -8185,6 +8450,7 @@ components:
       - higher_is_better
       - value_per_point
       - point_size
+      - flattening_threshold
       - currency
       - created_at
       - updated_at
@@ -8240,6 +8506,15 @@ components:
             such as recall, so 0.812 → 0.857 is 4.5 points. Default 1: one unit as
             recorded.'
           default: 1.0
+        flattening_threshold:
+          type: number
+          maximum: 1.0
+          exclusiveMinimum: 0.0
+          title: Flattening Threshold
+          description: The diagnosis calls returns 'flattening' when the latest dataset
+            version's points per 10K fall below this share of the earlier versions'
+            average.
+          default: 0.5
         currency:
           type: string
           pattern: ^[A-Z]{3}$
@@ -8427,6 +8702,13 @@ components:
             exclusiveMinimum: 0.0
           - type: 'null'
           title: Point Size
+        flattening_threshold:
+          anyOf:
+          - type: number
+            maximum: 1.0
+            exclusiveMinimum: 0.0
+          - type: 'null'
+          title: Flattening Threshold
         currency:
           anyOf:
           - type: string
@@ -8443,6 +8725,34 @@ components:
         another project.
       examples:
       - value_per_point: '30000.00'
+    CauseCheck:
+      properties:
+        cause:
+          type: string
+          enum:
+          - data_mix
+          - label_quality
+          - eval
+          - model
+          - saturation
+          title: Cause
+        status:
+          type: string
+          enum:
+          - found
+          - ok
+          - not_checked
+          - not_applicable
+          title: Status
+        summary:
+          type: string
+          title: Summary
+      type: object
+      required:
+      - cause
+      - status
+      - summary
+      title: CauseCheck
     Check:
       properties:
         name:
@@ -9406,6 +9716,83 @@ components:
       - duration_ms
       - response_body
       title: DeliveryAttempt
+    Diagnosis:
+      properties:
+        capability_id:
+          type: string
+          title: Capability Id
+        eval_metric:
+          type: string
+          title: Eval Metric
+        flattening_threshold:
+          type: number
+          title: Flattening Threshold
+        versions:
+          items:
+            $ref: '#/components/schemas/ScoredVersion'
+          type: array
+          title: Versions
+          description: Scored dataset versions, oldest first.
+        trend:
+          type: string
+          enum:
+          - not_enough_data
+          - improving
+          - flattening
+          title: Trend
+        latest_vs_earlier:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latest Vs Earlier
+          description: Latest points per 10K ÷ average of earlier versions.
+          examples:
+          - 0.31
+        checks:
+          items:
+            $ref: '#/components/schemas/CauseCheck'
+          type: array
+          title: Checks
+        recommendation:
+          type: string
+          enum:
+          - not_enough_data
+          - keep_going
+          - refine_spec
+          - investigate
+          title: Recommendation
+        summary:
+          type: string
+          title: Summary
+          description: The recommendation and why, in plain language.
+        coverage:
+          anyOf:
+          - $ref: '#/components/schemas/Coverage'
+          - type: 'null'
+          description: The data-mix check behind it, if run.
+        suggested_spec_change:
+          anyOf:
+          - $ref: '#/components/schemas/SuggestedSpecChange'
+          - type: 'null'
+        generated_at:
+          type: string
+          format: date-time
+          title: Generated At
+      type: object
+      required:
+      - capability_id
+      - eval_metric
+      - flattening_threshold
+      - versions
+      - trend
+      - latest_vs_earlier
+      - checks
+      - recommendation
+      - summary
+      - coverage
+      - suggested_spec_change
+      - generated_at
+      title: Diagnosis
     EvalResult:
       properties:
         id:
@@ -9575,6 +9962,25 @@ components:
       - data
       - created_at
       title: Event
+    Excluded:
+      properties:
+        data_source_id:
+          type: string
+          title: Data Source Id
+        name:
+          type: string
+          title: Name
+        reason:
+          type: string
+          title: Reason
+          examples:
+          - Rights expire 2026-11-30, before the due date 2026-12-15.
+      type: object
+      required:
+      - data_source_id
+      - name
+      - reason
+      title: Excluded
     ExternalDecision:
       properties:
         status:
@@ -10987,6 +11393,135 @@ components:
       - access_key_id
       - secret_access_key
       title: S3Credentials
+    ScoredVersion:
+      properties:
+        dataset_version_id:
+          type: string
+          title: Dataset Version Id
+        dataset_id:
+          type: string
+          title: Dataset Id
+        version:
+          type: integer
+          title: Version
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        eval_value:
+          type: number
+          title: Eval Value
+        baseline_eval_value:
+          type: number
+          title: Baseline Eval Value
+        points:
+          type: number
+          title: Points
+          description: Improvement over its baseline (positive is better).
+        spend:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Spend
+          description: Spend on the batches it added.
+        points_per_10k:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Points Per 10K
+      type: object
+      required:
+      - dataset_version_id
+      - dataset_id
+      - version
+      - created_at
+      - eval_value
+      - baseline_eval_value
+      - points
+      - spend
+      - points_per_10k
+      title: ScoredVersion
+    SourceEvidence:
+      properties:
+        batches_decided:
+          type: integer
+          title: Batches Decided
+          description: Accepted or rejected batches.
+        delivered:
+          type: integer
+          title: Delivered
+        accepted:
+          type: integer
+          title: Accepted
+        accept_rate:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Accept Rate
+          description: accepted ÷ delivered.
+          examples:
+          - 0.94
+        cost_per_usable_unit:
+          anyOf:
+          - type: string
+            examples:
+            - '25000.00'
+          - type: 'null'
+          title: Cost Per Usable Unit
+          examples:
+          - '1.65'
+        usable_per_day:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Usable Per Day
+          description: Throughput.
+          examples:
+          - 410.5
+        open_commitments:
+          type: integer
+          title: Open Commitments
+          description: Units still owed on its active allocations (quantity − accepted).
+        last_quoted_rate:
+          anyOf:
+          - type: string
+            examples:
+            - '25000.00'
+          - type: 'null'
+          title: Last Quoted Rate
+          examples:
+          - '1.55'
+        currency:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Currency
+        value_mix:
+          additionalProperties:
+            additionalProperties:
+              type: number
+            type: object
+          type: object
+          title: Value Mix
+          description: Share of each attribute value in its accepted deliveries.
+          examples:
+          - package_type:
+              shrink_wrapped: 0.38
+      type: object
+      required:
+      - batches_decided
+      - delivered
+      - accepted
+      - accept_rate
+      - cost_per_usable_unit
+      - usable_per_day
+      - open_commitments
+      - last_quoted_rate
+      - currency
+      - value_mix
+      title: SourceEvidence
+      description: What a source's recent deliveries show (last 90 days).
     SourceKindRow:
       properties:
         spend:
@@ -11496,6 +12031,124 @@ components:
             corrugated_box: 0.25
             poly_mailer: 0.3
             shrink_wrapped: 0.45
+    SuggestedSpecChange:
+      properties:
+        spec_id:
+          type: string
+          title: Spec Id
+        from_spec_version:
+          type: integer
+          title: From Spec Version
+        coverage_targets:
+          additionalProperties:
+            additionalProperties:
+              type: number
+            type: object
+          type: object
+          title: Coverage Targets
+          description: 'Suggested new targets: more weight on values below target,
+            so future collection catches up; the rest scaled down to keep the same
+            total.'
+        change_note:
+          type: string
+          title: Change Note
+      type: object
+      required:
+      - spec_id
+      - from_spec_version
+      - coverage_targets
+      - change_note
+      title: SuggestedSpecChange
+    Suggestion:
+      properties:
+        data_source_id:
+          type: string
+          title: Data Source Id
+        name:
+          type: string
+          title: Name
+          examples:
+          - Surge
+        kind:
+          type: string
+          title: Kind
+          examples:
+          - human_vendor
+        role:
+          type: string
+          enum:
+          - proven
+          - pilot
+          title: Role
+          description: '`proven`: has a track record; `pilot`: untested, small trial
+            share.'
+        share:
+          type: number
+          title: Share
+          description: Share of the remaining usable units.
+          examples:
+          - 0.42
+        expected_usable:
+          type: integer
+          title: Expected Usable
+          examples:
+          - 2520
+        order_quantity:
+          type: integer
+          title: Order Quantity
+          description: What to allocate, including extra for expected rejects.
+          examples:
+          - 2681
+        expected_cost:
+          anyOf:
+          - type: string
+            examples:
+            - '25000.00'
+          - type: 'null'
+          title: Expected Cost
+          examples:
+          - '4155.55'
+        currency:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Currency
+        capacity_by_due_date:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Capacity By Due Date
+          description: 'Usable units it can likely deliver by the due date (null:
+            no due date).'
+        evidence:
+          $ref: '#/components/schemas/SourceEvidence'
+        notes:
+          items:
+            type: string
+          type: array
+          title: Notes
+        allocation:
+          additionalProperties: true
+          type: object
+          title: Allocation
+          description: Ready to send to POST /v1/allocations as-is (adjust anything
+            first).
+      type: object
+      required:
+      - data_source_id
+      - name
+      - kind
+      - role
+      - share
+      - expected_usable
+      - order_quantity
+      - expected_cost
+      - currency
+      - capacity_by_due_date
+      - evidence
+      - notes
+      - allocation
+      title: Suggestion
     UnitCost:
       properties:
         unit:

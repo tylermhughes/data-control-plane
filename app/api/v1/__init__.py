@@ -13,6 +13,7 @@ from app.api.v1 import (
     me,
     projects,
     quality,
+    recommendations,
     reports,
     requests,
     specs,
@@ -40,3 +41,4 @@ router.include_router(quality.router)
 router.include_router(intake.inbound_endpoints)
 router.include_router(intake.inbound_receiver)
 router.include_router(intake.connector_routes)
+router.include_router(recommendations.router)
