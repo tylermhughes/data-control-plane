@@ -37,6 +37,15 @@ To stop it, press `Ctrl+C`, or run `docker compose down`. Your data is kept for 
    `uv python install 3.12`.
 3. **Project libraries:** in this folder, run `uv sync`.
 
+## Run the north-star demo
+
+With DCP running, this runs the whole loop from `docs/PRODUCT.md` through the API and prints the
+portfolio (built-in Python 3.9+, nothing to install):
+
+```
+DCP_API_KEY=dcp_... python3 scripts/demo.py
+```
+
 ## Try webhooks locally
 
 `scripts/webhook_receiver.py` prints every webhook it receives and checks its signature:

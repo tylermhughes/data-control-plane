@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -55,6 +56,9 @@ class SpecVersion(Timestamped, Base):
     guidelines: Mapped[str] = mapped_column(Text, default="")
     attributes: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     coverage_targets: Mapped[dict[str, dict[str, float]]] = mapped_column(JSONB, default=dict)
+    coverage_tolerance: Mapped[float] = mapped_column(
+        Float, default=0.05, server_default=text("0.05")
+    )
     acceptance_rules: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     record_schema: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     change_note: Mapped[str] = mapped_column(Text, default="")

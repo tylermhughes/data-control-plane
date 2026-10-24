@@ -12,7 +12,7 @@ from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import Session
 
 from app.errors import Conflict, Invalid, NotFound
-from app.models import Allocation, Project, Request
+from app.models import Allocation, Dataset, Project, Request
 from app.models.base import InProject, ProjectScoped
 from app.services.pagination import paginate
 from app.services.principal import Principal
@@ -71,9 +71,10 @@ def refuse_if_used(session: Session, what: str, users: dict[str, ColumnElement[b
 
     `users` maps a label (e.g. "request") to a condition selecting the rows that use it.
     """
-    tables: dict[str, type[Request] | type[Allocation]] = {
+    tables: dict[str, type[Request] | type[Allocation] | type[Dataset]] = {
         "request": Request,
         "allocation": Allocation,
+        "dataset": Dataset,
     }
     for label, condition in users.items():
         ids = session.scalars(select(tables[label].id).where(condition).limit(4)).all()

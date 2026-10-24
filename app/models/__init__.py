@@ -5,6 +5,7 @@ from app.models.base import Base
 from app.models.batch import Batch
 from app.models.capability import Capability
 from app.models.data_source import DataSource
+from app.models.dataset import Dataset, DatasetVersion, EvalResult
 from app.models.event import Event
 from app.models.idempotency import IdempotencyRecord
 from app.models.project import Project
@@ -19,6 +20,9 @@ __all__ = [
     "Batch",
     "Capability",
     "DataSource",
+    "Dataset",
+    "DatasetVersion",
+    "EvalResult",
     "Event",
     "IdempotencyRecord",
     "Project",

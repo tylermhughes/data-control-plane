@@ -8,8 +8,10 @@ from app.api.v1 import (
     batches,
     capabilities,
     data_sources,
+    datasets,
     me,
     projects,
+    reports,
     requests,
     specs,
     webhooks,
@@ -28,3 +30,7 @@ router.include_router(batches.router)
 router.include_router(webhooks.endpoints)
 router.include_router(webhooks.deliveries)
 router.include_router(webhooks.events)
+router.include_router(datasets.router)
+router.include_router(datasets.versions)
+router.include_router(datasets.evals)
+router.include_router(reports.router)

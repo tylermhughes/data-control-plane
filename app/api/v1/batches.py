@@ -16,7 +16,8 @@ from app.schemas.batches import (
     BatchUpdate,
 )
 from app.schemas.common import Page
-from app.services import batches
+from app.schemas.datasets import Coverage
+from app.services import batches, coverage
 
 router = APIRouter(prefix="/batches", tags=["batches"])
 
@@ -123,3 +124,11 @@ def reject_batch(
     out = Batch.model_validate(batches.reject_batch(session, principal, batch_id, body))
     session.commit()
     return out
+
+
+@router.get("/{batch_id}/coverage", summary="Coverage vs targets", responses=READ_ERRORS)
+def get_coverage(batch_id: str, session: SessionDep, principal: PrincipalDep) -> Coverage:
+    """This batch's accepted items per attribute value, against its spec version's coverage
+    targets. Values more than the spec's tolerance below target are `below` and listed in
+    `gaps`. Uses the batch's `attribute_counts`, so it's empty if none were recorded."""
+    return coverage.for_batch(session, principal, batch_id)

@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from sqlalchemy.orm import Session
 
 from app.ids import new_id
-from app.models import Capability, Request
+from app.models import Capability, Dataset, Request
 from app.schemas import capabilities as schemas
 from app.services import events, scoped
 from app.services.principal import Principal
@@ -66,7 +66,11 @@ def update_capability(
 def delete_capability(session: Session, actor: Principal, cap_id: str) -> None:
     cap = get_capability(session, actor, cap_id)
     actor.require_write()
-    scoped.refuse_if_used(session, LABEL, {"request": Request.capability_id == cap.id})
+    scoped.refuse_if_used(
+        session,
+        LABEL,
+        {"request": Request.capability_id == cap.id, "dataset": Dataset.capability_id == cap.id},
+    )
     _emit(session, "capability.deleted", cap, actor)
     session.delete(cap)
     session.flush()

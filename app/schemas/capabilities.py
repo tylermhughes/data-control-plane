@@ -11,6 +11,7 @@ _EXAMPLE: dict[str, Any] = {
     "eval_metric": "recall@0.5",
     "higher_is_better": True,
     "value_per_point": "25000.00",
+    "point_size": 0.01,
     "currency": "USD",
 }
 
@@ -28,6 +29,12 @@ class CapabilityCreate(BaseModel):
     value_per_point: Money = Field(
         description="Estimated business value of one point of improvement on the eval metric."
     )
+    point_size: float = Field(
+        1.0,
+        gt=0,
+        description="How much of the metric is one point. Use 0.01 for a 0–1 metric such as "
+        "recall, so 0.812 → 0.857 is 4.5 points. Default 1: one unit as recorded.",
+    )
     currency: Currency
 
 
@@ -43,6 +50,7 @@ class CapabilityUpdate(BaseModel):
     eval_metric: str | None = Field(None, min_length=1, max_length=200)
     higher_is_better: bool | None = None
     value_per_point: Money | None = None
+    point_size: float | None = Field(None, gt=0)
     currency: Currency | None = None
 
 
@@ -56,6 +64,7 @@ class Capability(BaseModel):
     eval_metric: str = Field(examples=["recall@0.5"])
     higher_is_better: bool
     value_per_point: MoneyOut
+    point_size: float = Field(examples=[0.01])
     currency: str = Field(examples=["USD"])
     created_at: datetime
     updated_at: datetime

@@ -2628,6 +2628,63 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Unprocessable Entity
+  /v1/requests/{request_id}/coverage:
+    get:
+      tags:
+      - requests
+      summary: Coverage vs targets
+      description: 'All accepted batches of this request, against its current spec
+        version''s coverage
+
+        targets. Values more than the spec''s tolerance below target are `below` and
+        listed in
+
+        `gaps`.'
+      operationId: get_coverage_v1_requests__request_id__coverage_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Request Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coverage'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
   /v1/allocations:
     get:
       tags:
@@ -3684,6 +3741,64 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Unprocessable Entity
+  /v1/batches/{batch_id}/coverage:
+    get:
+      tags:
+      - batches
+      summary: Coverage vs targets
+      description: 'This batch''s accepted items per attribute value, against its
+        spec version''s coverage
+
+        targets. Values more than the spec''s tolerance below target are `below` and
+        listed in
+
+        `gaps`. Uses the batch''s `attribute_counts`, so it''s empty if none were
+        recorded.'
+      operationId: get_coverage_v1_batches__batch_id__coverage_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Batch Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coverage'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
   /v1/webhook-endpoints:
     get:
       tags:
@@ -4545,6 +4660,1053 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Unprocessable Entity
+  /v1/datasets:
+    get:
+      tags:
+      - datasets
+      summary: List datasets
+      operationId: list_datasets_v1_datasets_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only items in this project. Project keys always see only theirs.
+          title: Project Id
+        description: Only items in this project. Project keys always see only theirs.
+      - name: capability_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only for this capability.
+          title: Capability Id
+        description: Only for this capability.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_Dataset_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    post:
+      tags:
+      - datasets
+      summary: Create a dataset
+      description: 'A dataset is a named line of training data for one capability.
+        Its content lives in
+
+        frozen, numbered versions.'
+      operationId: create_dataset_v1_datasets_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
+          - type: 'null'
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
+          title: Idempotency-Key
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatasetCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dataset'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/datasets/{dataset_id}:
+    get:
+      tags:
+      - datasets
+      summary: Get a dataset
+      operationId: get_dataset_v1_datasets__dataset_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: dataset_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dataset Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dataset'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    patch:
+      tags:
+      - datasets
+      summary: Rename or re-describe a dataset
+      operationId: update_dataset_v1_datasets__dataset_id__patch
+      security:
+      - ApiKey: []
+      parameters:
+      - name: dataset_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dataset Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatasetUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dataset'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - datasets
+      summary: Delete an empty dataset
+      operationId: delete_dataset_v1_datasets__dataset_id__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: dataset_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dataset Id
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/datasets/{dataset_id}/versions:
+    post:
+      tags:
+      - datasets
+      summary: Create the next version (frozen)
+      description: 'Freezes a set of **accepted** batches as the dataset''s next version.
+
+
+        By default it is compared against the dataset''s previous version and starts
+        from that
+
+        version''s batches, adding `batch_ids`. `new_vs_baseline` shows what the added
+        batches
+
+        cost: the spend behind this version''s eval change.'
+      operationId: create_version_v1_datasets__dataset_id__versions_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: dataset_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dataset Id
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
+          - type: 'null'
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
+          title: Idempotency-Key
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatasetVersionCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetVersion'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/dataset-versions:
+    get:
+      tags:
+      - datasets
+      summary: List dataset versions
+      operationId: list_versions_v1_dataset_versions_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only items in this project. Project keys always see only theirs.
+          title: Project Id
+        description: Only items in this project. Project keys always see only theirs.
+      - name: dataset_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only of this dataset.
+          title: Dataset Id
+        description: Only of this dataset.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_DatasetVersion_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/dataset-versions/{version_id}:
+    get:
+      tags:
+      - datasets
+      summary: Get a dataset version
+      operationId: get_version_v1_dataset_versions__version_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetVersion'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - datasets
+      summary: Delete a dataset version
+      description: Only versions with no eval results that no other version uses as
+        a baseline.
+      operationId: delete_version_v1_dataset_versions__version_id__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/dataset-versions/{version_id}/manifest:
+    get:
+      tags:
+      - datasets
+      summary: Files in a version
+      description: 'Every file pointer in the version, with the batch, source and
+        spec version it came
+
+        from. What a training pipeline downloads.'
+      operationId: get_manifest_v1_dataset_versions__version_id__manifest_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Version Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Manifest'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/eval-results:
+    get:
+      tags:
+      - eval results
+      summary: List eval results
+      operationId: list_evals_v1_eval_results_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only items in this project. Project keys always see only theirs.
+          title: Project Id
+        description: Only items in this project. Project keys always see only theirs.
+      - name: dataset_version_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only for this version.
+          title: Dataset Version Id
+        description: Only for this version.
+      - name: capability_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only for this capability.
+          title: Capability Id
+        description: Only for this capability.
+      - name: metric
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only this metric.
+          title: Metric
+        description: Only this metric.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_EvalResult_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    post:
+      tags:
+      - eval results
+      summary: Record an eval result
+      description: 'What a dataset version did to one metric. `metric` and `higher_is_better`
+        default to
+
+        the capability''s main metric. Record several metrics (e.g. slices) as separate
+        results.'
+      operationId: record_eval_v1_eval_results_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
+          - type: 'null'
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
+          title: Idempotency-Key
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvalResultCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvalResult'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/eval-results/{eval_id}:
+    get:
+      tags:
+      - eval results
+      summary: Get an eval result
+      operationId: get_eval_v1_eval_results__eval_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: eval_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Eval Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvalResult'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - eval results
+      summary: Delete an eval result
+      operationId: delete_eval_v1_eval_results__eval_id__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: eval_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Eval Id
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/reports/portfolio:
+    get:
+      tags:
+      - reports
+      summary: Which data spend improved the models
+      description: 'Per capability and per source type: spend, usable units, cost
+        per usable unit, eval
+
+        change (in points, positive is better), points per 10K of spend and, per capability,
+
+        value and ROI.
+
+
+        **Eval change** counts each dataset version with a main-metric result whose
+        baseline has
+
+        one too. Its spend is what that version''s new batches cost. **By source type**,
+        eval
+
+        change is an estimate: each version''s change is split by each type''s share
+        of the items
+
+        it added (`is_estimate: true`). Every row lists the versions and eval results
+        it''s based
+
+        on, and `notes` explains anything missing.'
+      operationId: get_portfolio_v1_reports_portfolio_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only items in this project. Project keys always see only theirs.
+          title: Project Id
+        description: Only items in this project. Project keys always see only theirs.
+      - name: since
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          description: Only batches and versions from this time on.
+          title: Since
+        description: Only batches and versions from this time on.
+      - name: until
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          description: Only before this time.
+          title: Until
+        description: Only before this time.
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Portfolio'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
 components:
   schemas:
     AcceptanceRule:
@@ -4922,6 +6084,23 @@ components:
       examples:
       - due_date: '2026-12-08'
         quantity: 5000
+    Amount:
+      properties:
+        currency:
+          type: string
+          title: Currency
+          examples:
+          - USD
+        amount:
+          type: string
+          title: Amount
+          examples:
+          - '25000.00'
+      type: object
+      required:
+      - currency
+      - amount
+      title: Amount
     ApiKey:
       properties:
         id:
@@ -5643,6 +6822,11 @@ components:
           title: Value Per Point
           examples:
           - '25000.00'
+        point_size:
+          type: number
+          title: Point Size
+          examples:
+          - 0.01
         currency:
           type: string
           title: Currency
@@ -5665,6 +6849,7 @@ components:
       - eval_metric
       - higher_is_better
       - value_per_point
+      - point_size
       - currency
       - created_at
       - updated_at
@@ -5712,6 +6897,14 @@ components:
             eval metric.
           examples:
           - '25000.00'
+        point_size:
+          type: number
+          exclusiveMinimum: 0.0
+          title: Point Size
+          description: 'How much of the metric is one point. Use 0.01 for a 0–1 metric
+            such as recall, so 0.812 → 0.857 is 4.5 points. Default 1: one unit as
+            recorded.'
+          default: 1.0
         currency:
           type: string
           pattern: ^[A-Z]{3}$
@@ -5733,7 +6926,129 @@ components:
         eval_metric: recall@0.5
         higher_is_better: true
         name: Package damage detection
+        point_size: 0.01
         value_per_point: '25000.00'
+    CapabilityRow:
+      properties:
+        spend:
+          items:
+            $ref: '#/components/schemas/Amount'
+          type: array
+          title: Spend
+          description: All batch spend in the period.
+        usable_units:
+          items:
+            $ref: '#/components/schemas/UnitCount'
+          type: array
+          title: Usable Units
+          description: Accepted items in the period.
+        cost_per_usable_unit:
+          items:
+            $ref: '#/components/schemas/UnitCost'
+          type: array
+          title: Cost Per Usable Unit
+        eval_change_points:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Eval Change Points
+          description: Improvement on the main metric, in points (positive is better),
+            summed over versions compared with their baseline. Null if nothing could
+            be compared.
+          examples:
+          - 4.5
+        scored_versions:
+          type: integer
+          title: Scored Versions
+          description: Dataset versions with a comparable eval result.
+        spend_on_scored_versions:
+          items:
+            $ref: '#/components/schemas/Amount'
+          type: array
+          title: Spend On Scored Versions
+          description: Spend on the batches each scored version added over its baseline.
+        points_per_10k:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Points Per 10K
+          description: eval_change_points per 10,000 of spend_on_scored_versions.
+          examples:
+          - 6.25
+        sources:
+          $ref: '#/components/schemas/Sources'
+        notes:
+          items:
+            type: string
+          type: array
+          title: Notes
+          description: Why a figure is missing or approximate.
+        capability_id:
+          type: string
+          title: Capability Id
+        name:
+          type: string
+          title: Name
+          examples:
+          - Package damage detection
+        eval_metric:
+          type: string
+          title: Eval Metric
+          examples:
+          - recall@0.5
+        point_size:
+          type: number
+          title: Point Size
+          examples:
+          - 0.01
+        value_per_point:
+          type: string
+          title: Value Per Point
+          examples:
+          - '25000.00'
+        currency:
+          type: string
+          title: Currency
+          examples:
+          - USD
+        value:
+          anyOf:
+          - type: string
+            examples:
+            - '25000.00'
+          - type: 'null'
+          title: Value
+          description: eval_change_points × value_per_point.
+          examples:
+          - '112500.00'
+        roi:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Roi
+          description: value ÷ spend_on_scored_versions, e.g. 15.6 means 15.6× return.
+          examples:
+          - 15.63
+      type: object
+      required:
+      - spend
+      - usable_units
+      - cost_per_usable_unit
+      - eval_change_points
+      - scored_versions
+      - spend_on_scored_versions
+      - points_per_10k
+      - sources
+      - notes
+      - capability_id
+      - name
+      - eval_metric
+      - point_size
+      - value_per_point
+      - currency
+      - value
+      - roi
+      title: CapabilityRow
     CapabilityUpdate:
       properties:
         name:
@@ -5771,6 +7086,12 @@ components:
             - '25000.00'
           - type: 'null'
           title: Value Per Point
+        point_size:
+          anyOf:
+          - type: number
+            exclusiveMinimum: 0.0
+          - type: 'null'
+          title: Point Size
         currency:
           anyOf:
           - type: string
@@ -5787,6 +7108,128 @@ components:
         another project.
       examples:
       - value_per_point: '30000.00'
+    Coverage:
+      properties:
+        spec_version_id:
+          type: string
+          title: Spec Version Id
+        tolerance:
+          type: number
+          title: Tolerance
+          examples:
+          - 0.05
+        accepted_count:
+          type: integer
+          title: Accepted Count
+          description: Accepted items in the batches considered.
+        batch_ids:
+          items:
+            type: string
+          type: array
+          title: Batch Ids
+        attributes:
+          items:
+            $ref: '#/components/schemas/CoverageAttribute'
+          type: array
+          title: Attributes
+        gaps:
+          items:
+            type: string
+          type: array
+          title: Gaps
+          description: Short summaries of every value below target.
+          examples:
+          - - 'package_type=shrink_wrapped: 27% vs 35% target'
+      type: object
+      required:
+      - spec_version_id
+      - tolerance
+      - accepted_count
+      - batch_ids
+      - attributes
+      - gaps
+      title: Coverage
+    CoverageAttribute:
+      properties:
+        attribute:
+          type: string
+          title: Attribute
+          examples:
+          - package_type
+        counted:
+          type: integer
+          title: Counted
+          description: Accepted items with a count for this attribute.
+        counted_share_of_accepted:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Counted Share Of Accepted
+          description: How much of the accepted data this attribute's counts cover.
+        values:
+          items:
+            $ref: '#/components/schemas/CoverageValue'
+          type: array
+          title: Values
+      type: object
+      required:
+      - attribute
+      - counted
+      - counted_share_of_accepted
+      - values
+      title: CoverageAttribute
+    CoverageValue:
+      properties:
+        value:
+          type: string
+          title: Value
+          examples:
+          - shrink_wrapped
+        count:
+          type: integer
+          title: Count
+          examples:
+          - 1300
+        actual_share:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Actual Share
+          description: count ÷ items counted for this attribute.
+          examples:
+          - 0.27
+        target_share:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Target Share
+          examples:
+          - 0.35
+        gap:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Gap
+          description: actual − target.
+          examples:
+          - -0.08
+        status:
+          type: string
+          title: Status
+          description: '`below` (more than the tolerance under target), `ok`, `no_target`
+            (no target set for this value) or `no_data` (nothing counted for this
+            attribute yet).'
+          examples:
+          - below
+      type: object
+      required:
+      - value
+      - count
+      - actual_share
+      - target_share
+      - gap
+      - status
+      title: CoverageValue
     DataSource:
       properties:
         id:
@@ -6049,6 +7492,199 @@ components:
         change.
       examples:
       - rights_expires_at: '2029-06-30'
+    Dataset:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - dst_01m5n7gwqfa18zhpw1zwh7w2zy
+        project_id:
+          type: string
+          title: Project Id
+        capability_id:
+          type: string
+          title: Capability Id
+        name:
+          type: string
+          title: Name
+          examples:
+          - damage-det
+        description:
+          type: string
+          title: Description
+        latest_version:
+          type: integer
+          title: Latest Version
+          description: 0 until a version is created.
+          examples:
+          - 3
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - project_id
+      - capability_id
+      - name
+      - description
+      - latest_version
+      - created_at
+      - updated_at
+      title: Dataset
+    DatasetCreate:
+      properties:
+        capability_id:
+          type: string
+          title: Capability Id
+          description: The capability this data trains. Sets the project.
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+          description: Unique within the project.
+        description:
+          type: string
+          maxLength: 10000
+          title: Description
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+      - capability_id
+      - name
+      title: DatasetCreate
+      examples:
+      - capability_id: cap_01m5n7gwqfa18zhpw1zwh7w2zy
+        description: Training data for package damage detection.
+        name: damage-det
+    DatasetUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 200
+            minLength: 1
+          - type: 'null'
+          title: Name
+        description:
+          anyOf:
+          - type: string
+            maxLength: 10000
+          - type: 'null'
+          title: Description
+      additionalProperties: false
+      type: object
+      title: DatasetUpdate
+      examples:
+      - description: Conveyor cameras.
+    DatasetVersion:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - dsv_01m5n7gwqfa18zhpw1zwh7w2zy
+        project_id:
+          type: string
+          title: Project Id
+        dataset_id:
+          type: string
+          title: Dataset Id
+        capability_id:
+          type: string
+          title: Capability Id
+        version:
+          type: integer
+          title: Version
+          examples:
+          - 2
+        baseline_version_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Baseline Version Id
+        batch_ids:
+          items:
+            type: string
+          type: array
+          title: Batch Ids
+        totals:
+          items:
+            $ref: '#/components/schemas/UnitTotal'
+          type: array
+          title: Totals
+          description: All batches in this version.
+        new_vs_baseline:
+          items:
+            $ref: '#/components/schemas/UnitTotal'
+          type: array
+          title: New Vs Baseline
+          description: 'Only batches the baseline didn''t have: the spend that bought
+            this version''s eval change.'
+        notes:
+          type: string
+          title: Notes
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - project_id
+      - dataset_id
+      - capability_id
+      - version
+      - baseline_version_id
+      - batch_ids
+      - totals
+      - new_vs_baseline
+      - notes
+      - created_at
+      title: DatasetVersion
+    DatasetVersionCreate:
+      properties:
+        batch_ids:
+          items:
+            type: string
+          type: array
+          maxItems: 10000
+          title: Batch Ids
+          description: Accepted batches to add. Only accepted batches can go into
+            a dataset.
+        baseline_version_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Baseline Version Id
+          description: The version this one is compared against (any version for the
+            same capability). Leave it out to use this dataset's previous version;
+            send null for none.
+        include_baseline_batches:
+          type: boolean
+          title: Include Baseline Batches
+          description: Start from the baseline's batches and add `batch_ids` to them.
+          default: true
+        notes:
+          type: string
+          maxLength: 10000
+          title: Notes
+          default: ''
+      additionalProperties: false
+      type: object
+      title: DatasetVersionCreate
+      examples:
+      - batch_ids:
+        - bat_01m5n7gwqfa18zhpw1zwh7w2zy
+        notes: Adds the shrink-wrapped deliveries from Surge and Mercor.
     DeliveryAttempt:
       properties:
         at:
@@ -6083,6 +7719,127 @@ components:
       - duration_ms
       - response_body
       title: DeliveryAttempt
+    EvalResult:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - evr_01m5n7gwqfa18zhpw1zwh7w2zy
+        project_id:
+          type: string
+          title: Project Id
+        dataset_version_id:
+          type: string
+          title: Dataset Version Id
+        capability_id:
+          type: string
+          title: Capability Id
+        metric:
+          type: string
+          title: Metric
+          examples:
+          - recall@0.5
+        value:
+          type: number
+          title: Value
+          examples:
+          - 0.857
+        higher_is_better:
+          type: boolean
+          title: Higher Is Better
+        run_name:
+          type: string
+          title: Run Name
+        external_run_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: External Run Url
+        recorded_at:
+          type: string
+          format: date-time
+          title: Recorded At
+        notes:
+          type: string
+          title: Notes
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+      type: object
+      required:
+      - id
+      - project_id
+      - dataset_version_id
+      - capability_id
+      - metric
+      - value
+      - higher_is_better
+      - run_name
+      - external_run_url
+      - recorded_at
+      - notes
+      - created_at
+      title: EvalResult
+    EvalResultCreate:
+      properties:
+        dataset_version_id:
+          type: string
+          title: Dataset Version Id
+        metric:
+          anyOf:
+          - type: string
+            maxLength: 200
+          - type: 'null'
+          title: Metric
+          description: Defaults to the capability's main eval metric.
+        value:
+          type: number
+          title: Value
+        higher_is_better:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Higher Is Better
+          description: Defaults to the capability's setting for its main metric. Required
+            for other metrics.
+        run_name:
+          type: string
+          maxLength: 200
+          title: Run Name
+          default: ''
+        external_run_url:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: External Run Url
+          description: e.g. a W&B run.
+        recorded_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Recorded At
+          description: Defaults to now.
+        notes:
+          type: string
+          maxLength: 10000
+          title: Notes
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+      - dataset_version_id
+      - value
+      title: EvalResultCreate
+      examples:
+      - dataset_version_id: dsv_01m5n7gwqfa18zhpw1zwh7w2zy
+        external_run_url: https://wandb.ai/acme/damage-det/runs/dmg-r50-1023
+        metric: recall@0.5
+        run_name: dmg-r50-1023
+        value: 0.857
     Event:
       properties:
         id:
@@ -6195,6 +7952,80 @@ components:
       required:
       - status
       title: Health
+    Manifest:
+      properties:
+        dataset_version_id:
+          type: string
+          title: Dataset Version Id
+        batch_count:
+          type: integer
+          title: Batch Count
+        file_count:
+          type: integer
+          title: File Count
+        files:
+          items:
+            $ref: '#/components/schemas/ManifestFile'
+          type: array
+          title: Files
+      type: object
+      required:
+      - dataset_version_id
+      - batch_count
+      - file_count
+      - files
+      title: Manifest
+    ManifestFile:
+      properties:
+        batch_id:
+          type: string
+          title: Batch Id
+        data_source_id:
+          type: string
+          title: Data Source Id
+        source_kind:
+          type: string
+          title: Source Kind
+          examples:
+          - human_vendor
+        spec_version_id:
+          type: string
+          title: Spec Version Id
+        uri:
+          type: string
+          title: Uri
+          examples:
+          - s3://acme-cv-intake/surge/b-2042/part-1.jsonl
+        format:
+          type: string
+          title: Format
+        sha256:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sha256
+        size_bytes:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Size Bytes
+        record_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Record Count
+      type: object
+      required:
+      - batch_id
+      - data_source_id
+      - source_kind
+      - spec_version_id
+      - uri
+      - format
+      - sha256
+      - size_bytes
+      - record_count
+      title: ManifestFile
     Page_Allocation_:
       properties:
         data:
@@ -6285,6 +8116,60 @@ components:
       - data
       - next_cursor
       title: Page[DataSource]
+    Page_DatasetVersion_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/DatasetVersion'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[DatasetVersion]
+    Page_Dataset_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/Dataset'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[Dataset]
+    Page_EvalResult_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/EvalResult'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[EvalResult]
     Page_Event_:
       properties:
         data:
@@ -6411,6 +8296,48 @@ components:
       - data
       - next_cursor
       title: Page[WebhookEndpoint]
+    Portfolio:
+      properties:
+        project_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Project Id
+        since:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Since
+        until:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Until
+        generated_at:
+          type: string
+          format: date-time
+          title: Generated At
+        by_capability:
+          items:
+            $ref: '#/components/schemas/CapabilityRow'
+          type: array
+          title: By Capability
+        by_source_kind:
+          items:
+            $ref: '#/components/schemas/SourceKindRow'
+          type: array
+          title: By Source Kind
+      type: object
+      required:
+      - project_id
+      - since
+      - until
+      - generated_at
+      - by_capability
+      - by_source_kind
+      title: Portfolio
     Problem:
       properties:
         type:
@@ -6837,6 +8764,118 @@ components:
       examples:
       - priority: P0
         spec_version_id: spv_01m5n7gwqfa18zhpw1zwh7w2zy
+    SourceKindRow:
+      properties:
+        spend:
+          items:
+            $ref: '#/components/schemas/Amount'
+          type: array
+          title: Spend
+          description: All batch spend in the period.
+        usable_units:
+          items:
+            $ref: '#/components/schemas/UnitCount'
+          type: array
+          title: Usable Units
+          description: Accepted items in the period.
+        cost_per_usable_unit:
+          items:
+            $ref: '#/components/schemas/UnitCost'
+          type: array
+          title: Cost Per Usable Unit
+        eval_change_points:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Eval Change Points
+          description: Improvement on the main metric, in points (positive is better),
+            summed over versions compared with their baseline. Null if nothing could
+            be compared.
+          examples:
+          - 4.5
+        scored_versions:
+          type: integer
+          title: Scored Versions
+          description: Dataset versions with a comparable eval result.
+        spend_on_scored_versions:
+          items:
+            $ref: '#/components/schemas/Amount'
+          type: array
+          title: Spend On Scored Versions
+          description: Spend on the batches each scored version added over its baseline.
+        points_per_10k:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Points Per 10K
+          description: eval_change_points per 10,000 of spend_on_scored_versions.
+          examples:
+          - 6.25
+        sources:
+          $ref: '#/components/schemas/Sources'
+        notes:
+          items:
+            type: string
+          type: array
+          title: Notes
+          description: Why a figure is missing or approximate.
+        kind:
+          type: string
+          title: Kind
+          examples:
+          - human_vendor
+        is_estimate:
+          type: boolean
+          title: Is Estimate
+          description: 'True: eval change is shared out between source types, not
+            measured.'
+        attribution_method:
+          type: string
+          title: Attribution Method
+          description: '`accepted_units_share`: each scored version''s eval change
+            is split by each source type''s share of the items that version added.'
+          examples:
+          - accepted_units_share
+      type: object
+      required:
+      - spend
+      - usable_units
+      - cost_per_usable_unit
+      - eval_change_points
+      - scored_versions
+      - spend_on_scored_versions
+      - points_per_10k
+      - sources
+      - notes
+      - kind
+      - is_estimate
+      - attribution_method
+      title: SourceKindRow
+    Sources:
+      properties:
+        dataset_version_ids:
+          items:
+            type: string
+          type: array
+          title: Dataset Version Ids
+          description: Versions whose eval change is counted.
+        eval_result_ids:
+          items:
+            type: string
+          type: array
+          title: Eval Result Ids
+          description: The eval results compared.
+        batch_count:
+          type: integer
+          title: Batch Count
+          description: Batches behind the spend and usable units.
+      type: object
+      required:
+      - dataset_version_ids
+      - eval_result_ids
+      - batch_count
+      title: Sources
+      description: Where the row's numbers come from.
     Spec:
       properties:
         id:
@@ -6920,6 +8959,15 @@ components:
           - package_type:
               poly_mailer: 0.35
               shrink_wrapped: 0.35
+        coverage_tolerance:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Coverage Tolerance
+          description: 'How far below its target share a value may fall before it
+            is flagged (0.05 = 5 points: target 35%, actual 29% is flagged; 33% is
+            not).'
+          default: 0.05
         acceptance_rules:
           items:
             $ref: '#/components/schemas/AcceptanceRule'
@@ -7057,6 +9105,15 @@ components:
           - package_type:
               poly_mailer: 0.35
               shrink_wrapped: 0.35
+        coverage_tolerance:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Coverage Tolerance
+          description: 'How far below its target share a value may fall before it
+            is flagged (0.05 = 5 points: target 35%, actual 29% is flagged; 33% is
+            not).'
+          default: 0.05
         acceptance_rules:
           items:
             $ref: '#/components/schemas/AcceptanceRule'
@@ -7177,6 +9234,13 @@ components:
             type: object
           - type: 'null'
           title: Coverage Targets
+        coverage_tolerance:
+          anyOf:
+          - type: number
+            maximum: 1.0
+            minimum: 0.0
+          - type: 'null'
+          title: Coverage Tolerance
         acceptance_rules:
           anyOf:
           - items:
@@ -7209,6 +9273,80 @@ components:
             corrugated_box: 0.25
             poly_mailer: 0.3
             shrink_wrapped: 0.45
+    UnitCost:
+      properties:
+        unit:
+          type: string
+          title: Unit
+          examples:
+          - images
+        currency:
+          type: string
+          title: Currency
+          examples:
+          - USD
+        amount:
+          type: string
+          title: Amount
+          description: spend ÷ usable (accepted) units.
+          examples:
+          - '1.65'
+      type: object
+      required:
+      - unit
+      - currency
+      - amount
+      title: UnitCost
+    UnitCount:
+      properties:
+        unit:
+          type: string
+          title: Unit
+          examples:
+          - images
+        count:
+          type: integer
+          title: Count
+          examples:
+          - 11290
+      type: object
+      required:
+      - unit
+      - count
+      title: UnitCount
+    UnitTotal:
+      properties:
+        unit:
+          type: string
+          title: Unit
+          examples:
+          - images
+        currency:
+          type: string
+          title: Currency
+          examples:
+          - USD
+        batch_count:
+          type: integer
+          title: Batch Count
+        accepted_count:
+          type: integer
+          title: Accepted Count
+          examples:
+          - 11290
+        spend:
+          type: string
+          title: Spend
+          examples:
+          - '25000.00'
+      type: object
+      required:
+      - unit
+      - currency
+      - batch_count
+      - accepted_count
+      - spend
+      title: UnitTotal
     WebhookDelivery:
       properties:
         id:

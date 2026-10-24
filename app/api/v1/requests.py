@@ -6,8 +6,9 @@ from app.api.deps import Cursor, Limit, PrincipalDep, ProjectFilter, SessionDep
 from app.api.idempotency import IdempotencyDep
 from app.api.problems import READ_ERRORS, WRITE_ERRORS
 from app.schemas.common import Page
+from app.schemas.datasets import Coverage
 from app.schemas.requests import Request, RequestCreate, RequestStatus, RequestUpdate
-from app.services import requests
+from app.services import coverage, requests
 
 router = APIRouter(prefix="/requests", tags=["requests"])
 
@@ -107,3 +108,11 @@ def cancel_request(request_id: str, session: SessionDep, principal: PrincipalDep
     out = requests.to_schema(requests.cancel_request(session, principal, request_id))
     session.commit()
     return out
+
+
+@router.get("/{request_id}/coverage", summary="Coverage vs targets", responses=READ_ERRORS)
+def get_coverage(request_id: str, session: SessionDep, principal: PrincipalDep) -> Coverage:
+    """All accepted batches of this request, against its current spec version's coverage
+    targets. Values more than the spec's tolerance below target are `below` and listed in
+    `gaps`."""
+    return coverage.for_request(session, principal, request_id)

@@ -72,6 +72,13 @@ class SpecContent(BaseModel):
         "Each attribute's shares must add up to 1 or less.",
         examples=[{"package_type": {"shrink_wrapped": 0.35, "poly_mailer": 0.35}}],
     )
+    coverage_tolerance: float = Field(
+        0.05,
+        ge=0,
+        le=1,
+        description="How far below its target share a value may fall before it is flagged "
+        "(0.05 = 5 points: target 35%, actual 29% is flagged; 33% is not).",
+    )
     acceptance_rules: list[AcceptanceRule] = Field(default_factory=list, max_length=100)
     record_schema: dict[str, Any] | None = Field(
         None, description="Optional JSON Schema for each record. Checked against files from M6."
@@ -183,6 +190,7 @@ class SpecVersionUpdate(BaseModel):
     guidelines: str | None = Field(None, max_length=200_000)
     attributes: list[Attribute] | None = Field(None, max_length=100)
     coverage_targets: dict[str, dict[str, float]] | None = None
+    coverage_tolerance: float | None = Field(None, ge=0, le=1)
     acceptance_rules: list[AcceptanceRule] | None = Field(None, max_length=100)
     record_schema: dict[str, Any] | None = None
     change_note: str | None = Field(None, max_length=10_000)
