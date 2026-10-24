@@ -8,6 +8,7 @@ from app.models.data_source import DataSource
 from app.models.dataset import Dataset, DatasetVersion, EvalResult
 from app.models.event import Event
 from app.models.idempotency import IdempotencyRecord
+from app.models.intake import Connector, ConnectorObject, InboundEndpoint, InboundMessage
 from app.models.project import Project
 from app.models.quality import Job, QualityRun, RecordFingerprint
 from app.models.request import Allocation, Request
@@ -20,12 +21,16 @@ __all__ = [
     "Base",
     "Batch",
     "Capability",
+    "Connector",
+    "ConnectorObject",
     "DataSource",
     "Dataset",
     "DatasetVersion",
     "EvalResult",
     "Event",
     "IdempotencyRecord",
+    "InboundEndpoint",
+    "InboundMessage",
     "Job",
     "Project",
     "QualityRun",

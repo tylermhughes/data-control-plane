@@ -147,9 +147,10 @@ def create_batch(
             f"Batches can only be added to active allocations; this one is {alloc.status}."
         )
     decision = body.decision
+    delivered = body.delivered_count if body.delivered_count is not None else 0
     check_counts(
         alloc.spec_version,
-        body.delivered_count,
+        delivered,
         decision.accepted_count if decision else None,
         decision.attribute_counts if decision else None,
     )
@@ -161,9 +162,11 @@ def create_batch(
         spec_version_id=alloc.spec_version_id,
         received_at=body.received_at or utcnow(),
         status="received",
-        delivered_count=body.delivered_count,
+        delivered_count=delivered,
+        delivered_count_from_files=body.delivered_count is None,
         contributor_count=body.contributor_count,
-        spend=body.spend,
+        spend=body.spend if body.spend is not None else alloc.quoted_unit_rate * delivered,
+        spend_is_estimate=body.spend is None,
         currency=currency,
         artifacts=[a.model_dump(mode="json") for a in body.artifacts],
         reported_metrics=body.reported_metrics,
@@ -215,8 +218,10 @@ def _reimport(
         raise Conflict(f"Batch {batch.id} was {batch.status} in DCP, so an import can't change it.")
     before = _snapshot(batch)
 
-    batch.delivered_count = body.delivered_count
-    batch.spend = body.spend
+    if body.delivered_count is not None:
+        batch.delivered_count, batch.delivered_count_from_files = body.delivered_count, False
+    if body.spend is not None:
+        batch.spend, batch.spend_is_estimate = body.spend, False
     batch.contributor_count = body.contributor_count
     batch.artifacts = [a.model_dump(mode="json") for a in body.artifacts]
     batch.reported_metrics = body.reported_metrics
@@ -261,6 +266,10 @@ def update_batch(
             raise Conflict(
                 f"This batch is {batch.status}, so only notes can change (not {', '.join(frozen)})."
             )
+    if "delivered_count" in changes:
+        changes["delivered_count_from_files"] = False
+    if "spend" in changes:
+        changes["spend_is_estimate"] = False
     files_changed = "artifacts" in changes
     if files_changed:
         changes["artifacts"] = [a.model_dump(mode="json") for a in body.artifacts or []]

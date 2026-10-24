@@ -1,9 +1,11 @@
 from collections.abc import Sequence
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.errors import Conflict
 from app.ids import new_id
-from app.models import Allocation, DataSource
+from app.models import Allocation, Connector, DataSource, InboundEndpoint
 from app.schemas import data_sources as schemas
 from app.services import events, scoped
 from app.services.principal import Principal
@@ -74,6 +76,9 @@ def delete_source(session: Session, actor: Principal, src_id: str) -> None:
     src = get_source(session, actor, src_id)
     actor.require_write()
     scoped.refuse_if_used(session, LABEL, {"allocation": Allocation.data_source_id == src.id})
+    for model, label in ((Connector, "connectors"), (InboundEndpoint, "inbound webhooks")):
+        if session.scalar(select(model.id).where(model.data_source_id == src.id)):
+            raise Conflict(f"This data source still has {label}. Delete them first.")
     _emit(session, "data_source.deleted", src, actor)
     session.delete(src)
     session.flush()

@@ -52,6 +52,20 @@ When a batch lists files, the worker checks them automatically: format, schema, 
 attribute counts and the spec's acceptance rules. Local files go in `./data` and are referenced as
 `file:///data/...`. For S3, set the AWS settings in `.env` (see `.env.example`).
 
+## Automatic intake: inbound webhooks and bucket watching
+
+- **Inbound webhooks** (`/v1/inbound-webhooks`): give a vendor a URL and secret, and they push signed
+  delivery messages. Try it with `scripts/send_inbound.py`.
+- **Bucket watching** (`/v1/connectors`): DCP checks a bucket folder about once a minute and turns each
+  new file into a batch. To try it locally, start the dev profile, which adds a small S3 server
+  serving `./data/s3` (each folder in it is a bucket):
+
+  ```
+  docker compose --profile dev up --build
+  ```
+
+  Use endpoint `http://s3:7070` with the access key and secret from `.env.example`.
+
 ## Try webhooks locally
 
 `scripts/webhook_receiver.py` prints every webhook it receives and checks its signature:

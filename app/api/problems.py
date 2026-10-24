@@ -33,14 +33,14 @@ def problem_response(
     )
 
 
-def _responses(*statuses: int) -> dict[int | str, dict[str, Any]]:
+def problem_responses(*statuses: int) -> dict[int | str, dict[str, Any]]:
     return {s: {"model": Problem, "content": {PROBLEM_JSON: {}}} for s in statuses}
 
 
 # Error responses to declare on routes, so they appear in the OpenAPI spec.
-AUTH_ERRORS = _responses(401, 403)
-READ_ERRORS = _responses(401, 403, 404, 422)
-WRITE_ERRORS = _responses(401, 403, 404, 409, 422)
+AUTH_ERRORS = problem_responses(401, 403)
+READ_ERRORS = problem_responses(401, 403, 404, 422)
+WRITE_ERRORS = problem_responses(401, 403, 404, 409, 422)
 
 
 def install(app: FastAPI) -> None:

@@ -1,6 +1,7 @@
 """Background worker. Run with: python -m app.worker
 
-Each round it queues new events for webhook endpoints, sends due deliveries, runs a queued job
+Each round it queues new events for webhook endpoints, sends due deliveries, checks watched
+buckets that are due, runs a queued job
 (e.g. quality checks), and once an hour does housekeeping. It keeps going after errors,
 logging them, so one bad round never stops delivery for good.
 """
@@ -14,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_engine
-from app.services import dispatch, jobs, quality  # noqa: F401 (quality registers its job)
+from app.services import connectors, dispatch, jobs, quality  # noqa: F401 (quality registers its job)
 
 logger = logging.getLogger("app.worker")
 HOUSEKEEPING_EVERY = 3600.0
@@ -24,6 +25,7 @@ def run_once(session: Session) -> int:
     """One round of work. Returns how many things it did (0 means idle)."""
     done = dispatch.dispatch_events(session)
     done += dispatch.send_due(session)
+    done += connectors.poll_due(session)  # watched buckets whose next check is due
     done += jobs.run_due(session)  # one job per round, so webhooks keep flowing meanwhile
     done += dispatch.dispatch_events(session)  # send what the job just recorded right away
     return done

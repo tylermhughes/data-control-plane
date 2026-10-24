@@ -105,8 +105,18 @@ class BatchCreate(BaseModel):
 
     allocation_id: str = Field(description="Must be active.")
     received_at: datetime | None = Field(None, description="Defaults to now.")
-    delivered_count: int = Count
-    spend: Money = Field(description="What this delivery cost.")
+    delivered_count: int | None = Field(
+        None,
+        ge=0,
+        le=1_000_000_000,
+        description="Items delivered. If left out (only allowed when files are listed), DCP "
+        "fills it in from the files' record count after the checks.",
+    )
+    spend: Money | None = Field(
+        None,
+        description="What this delivery cost. If left out, DCP estimates it as the "
+        "allocation's quoted rate × delivered_count (`spend_is_estimate: true`) until it's set.",
+    )
     currency: Currency | None = Field(None, description="Defaults to the allocation's currency.")
     contributor_count: int | None = Field(None, ge=0, description="People who worked on it.")
     artifacts: list[Artifact] = Field(
@@ -127,6 +137,15 @@ class BatchCreate(BaseModel):
     decision: ExternalDecision | None = Field(
         None, description="Include to import a batch already accepted or rejected elsewhere."
     )
+
+    @model_validator(mode="after")
+    def _counts_known(self) -> Self:
+        if self.delivered_count is None:
+            if not self.artifacts:
+                raise ValueError("delivered_count is required when no files are listed")
+            if self.decision is not None:
+                raise ValueError("delivered_count is required when importing a decision")
+        return self
 
 
 class BatchUpdate(BaseModel):
@@ -218,6 +237,12 @@ class Batch(BaseModel):
     )
     artifacts: list[Artifact]
     reported_metrics: dict[str, float]
+    delivered_count_from_files: bool = Field(
+        description="True while DCP fills delivered_count in from the files' record count."
+    )
+    spend_is_estimate: bool = Field(
+        description="True while spend is an estimate (quoted rate × delivered_count)."
+    )
     quality: QualitySummary | None = Field(description="The latest automated check run.")
     override_reason: str | None = Field(description="Why a failed batch was accepted anyway.")
     notes: str

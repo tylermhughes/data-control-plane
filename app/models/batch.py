@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -71,6 +72,14 @@ class Batch(InProject, Base):
         JSONB, default=dict, server_default=text("'{}'::jsonb")
     )
     override_reason: Mapped[str | None] = mapped_column(Text)
+    # Filled in by DCP: delivered_count from the files' record count (when it wasn't given),
+    # and spend estimated as quoted rate × delivered (when it wasn't given).
+    delivered_count_from_files: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
+    spend_is_estimate: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
     artifacts: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     notes: Mapped[str] = mapped_column(Text, default="")
     decision_source: Mapped[str | None] = mapped_column(String(16))

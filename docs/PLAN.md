@@ -15,7 +15,7 @@ This file is kept up to date as each milestone moves forward (see the status tab
 | M4b | Events + outbound webhooks | ✅ Committed 2026-10-23 (manual test not yet confirmed) |
 | M5 | Datasets, evals, coverage, portfolio (north star) | ✅ Committed 2026-10-23 (manual test not yet confirmed) |
 | M6 | Automated file checks | ✅ Committed 2026-10-23 (manual test not yet confirmed) |
-| M7 | Inbound webhooks + S3 watcher | ⚪ Not started |
+| M7 | Inbound webhooks + S3 watcher | ✅ Committed 2026-10-23 (manual test not yet confirmed) |
 | M8 | Recommendations v0 | ⚪ Not started |
 | M9 | Headless polish | ⚪ Not started |
 
@@ -139,4 +139,8 @@ Testing uses **`http://localhost:8000/docs` → "Try it out"**, with curl as a b
 - 2026-10-23 (M6): coverage prefers counts taken from the files (`counts_from` per batch), falling back to reported counts. Events: `quality.completed`, `batch.checked`.
 - 2026-10-23 (M6): the job queue lives in Postgres (`jobs` table, SKIP LOCKED, 30-minute claim lease, 3 attempts). The worker runs one job per round and dispatches the resulting events straight away.
 - 2026-10-23 (M6): the demo writes real JSONL deliveries to `./data` (with planted duplicates and schema errors) and waits for the checks.
+- 2026-10-23 (M7): new dependencies `cryptography` (Fernet encryption for connector credentials, key derived from DCP_SECRET_KEY) and the `versity/versitygw:v1.8.0` image (Apache 2.0) for local S3, in the test profile (`s3-test`) and dev profile (`s3`, serving `./data/s3`). Both approved by Tyler; they replace MinIO, whose images are gone.
+- 2026-10-23 (M7): inbound webhooks belong to one data source. `POST /v1/inbound/{id}` needs no API key: Standard Webhooks signature with a derived secret, 5-minute timestamp tolerance, 1 MB limit. A repeated `webhook-id` returns the first result (`duplicate: true`). The body is `{"type": "batch.delivered", "data": <POST /v1/batches fields>}`, and `allocation_id` defaults to the source's single active allocation. Every message is logged (processed or rejected, with the reason). Rotating the secret keeps the old one valid for 24h. `scripts/send_inbound.py` is a reference sender.
+- 2026-10-23 (M7): S3 connectors (`s3_watch`) watch a bucket and prefix: their own endpoint, region, encrypted credentials (never shown; `access_key_hint` only), allocation (or the single active one), and poll interval (≥ 15s, default 60s). One file = one batch (external_ref `s3:<key>`); .jsonl/.ndjson/.csv/.parquet only; names starting with `.` or `_` are ignored; up to 100 new files per poll. Seen files are remembered, and a changed file (ETag, size or date) is re-checked if its batch is undecided. Errors are recorded on the connector and retried at the next poll. Quality checks read those files with the connector's credentials.
+- 2026-10-23 (M7): `delivered_count` and `spend` are optional on batches with files. DCP fills delivered_count in from the files' record count, and estimates spend as quoted rate × delivered (`spend_is_estimate`) until someone sets it. Data sources with connectors or inbound webhooks can't be deleted.
 - 2026-10-23 (M0): MinIO is deferred to M6, the first milestone that reads files. oasdiff is deferred until there is a first release to compare against.

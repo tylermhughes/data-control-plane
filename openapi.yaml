@@ -5904,6 +5904,1075 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
           description: Unprocessable Entity
+  /v1/inbound-webhooks:
+    get:
+      tags:
+      - intake
+      summary: List inbound webhooks
+      operationId: list_inbound_v1_inbound_webhooks_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only items in this project. Project keys always see only theirs.
+          title: Project Id
+        description: Only items in this project. Project keys always see only theirs.
+      - name: data_source_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only for this data source.
+          title: Data Source Id
+        description: Only for this data source.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_InboundEndpoint_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    post:
+      tags:
+      - intake
+      summary: Create an inbound webhook
+      description: 'Gives a data source''s own systems a URL to push deliveries to.
+        Give the sender the
+
+        `url_path` (on DCP''s address) and the `secret`; they sign each message with
+        it using
+
+        [Standard Webhooks](https://www.standardwebhooks.com), the same way DCP signs
+        its outbound
+
+        webhooks. See `POST /v1/inbound/{id}` for the message format.'
+      operationId: create_inbound_v1_inbound_webhooks_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
+          - type: 'null'
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
+          title: Idempotency-Key
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundEndpointCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundEndpointCreated'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/inbound-webhooks/{endpoint_id}:
+    get:
+      tags:
+      - intake
+      summary: Get an inbound webhook
+      operationId: get_inbound_v1_inbound_webhooks__endpoint_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: endpoint_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Endpoint Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundEndpoint'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    patch:
+      tags:
+      - intake
+      summary: Update an inbound webhook
+      operationId: update_inbound_v1_inbound_webhooks__endpoint_id__patch
+      security:
+      - ApiKey: []
+      parameters:
+      - name: endpoint_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Endpoint Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundEndpointUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundEndpoint'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - intake
+      summary: Delete an inbound webhook
+      description: Batches it created stay; its message log goes.
+      operationId: delete_inbound_v1_inbound_webhooks__endpoint_id__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: endpoint_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Endpoint Id
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/inbound-webhooks/{endpoint_id}/secret:
+    get:
+      tags:
+      - intake
+      summary: Show the signing secret
+      description: Needs write access.
+      operationId: get_inbound_secret_v1_inbound_webhooks__endpoint_id__secret_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: endpoint_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Endpoint Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSecret'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/inbound-webhooks/{endpoint_id}/rotate-secret:
+    post:
+      tags:
+      - intake
+      summary: Rotate the signing secret
+      description: 'Issues a new secret. Messages signed with the previous one are
+        still accepted for 24
+
+        hours, so the sender can switch over.'
+      operationId: rotate_inbound_secret_v1_inbound_webhooks__endpoint_id__rotate_secret_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: endpoint_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Endpoint Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookSecret'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/inbound-webhooks/{endpoint_id}/messages:
+    get:
+      tags:
+      - intake
+      summary: Messages received
+      description: Every message, processed or rejected, with the reason it was rejected.
+      operationId: list_inbound_messages_v1_inbound_webhooks__endpoint_id__messages_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: endpoint_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Endpoint Id
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_InboundMessageLog_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/inbound/{endpoint_id}:
+    post:
+      tags:
+      - intake
+      summary: Receive a signed delivery message
+      description: 'Called by the source''s systems, not with an API key. Headers
+        (Standard Webhooks):
+
+        `webhook-id` (unique per message), `webhook-timestamp` (Unix seconds, within
+        5 minutes),
+
+        `webhook-signature` (`v1,<base64 HMAC-SHA256 of "id.timestamp.body">` with
+        the secret).
+
+
+        Body: `{"type": "batch.delivered", "data": {...}}`, where `data` has the fields
+        of
+
+        `POST /v1/batches`. `allocation_id` may be left out if the source has exactly
+        one active
+
+        allocation. Sending the same `webhook-id` again returns the first result
+
+        (`duplicate: true`); a new message with the same `external_ref` updates the
+        batch.'
+      operationId: receive_v1_inbound__endpoint_id__post
+      parameters:
+      - name: endpoint_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Endpoint Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundResult'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/connectors:
+    get:
+      tags:
+      - intake
+      summary: List connectors
+      operationId: list_connectors_v1_connectors_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: project_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only items in this project. Project keys always see only theirs.
+          title: Project Id
+        description: Only items in this project. Project keys always see only theirs.
+      - name: data_source_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Only for this data source.
+          title: Data Source Id
+        description: Only for this data source.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_Connector_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    post:
+      tags:
+      - intake
+      summary: Watch a bucket for deliveries
+      description: 'DCP checks the bucket folder about every `poll_interval_seconds`
+        and turns each new
+
+        file (.jsonl, .ndjson, .csv, .parquet) into a batch of the data source. Its
+        quality checks
+
+        then run automatically; `delivered_count` comes from the files and `spend`
+        is estimated
+
+        from the allocation''s quoted rate until someone sets it. Files whose names
+        start with `.`
+
+        or `_` are ignored. Credentials are stored encrypted and never shown again.'
+      operationId: create_connector_v1_connectors_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: idempotency-key
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9._:-]{1,255}$
+          - type: 'null'
+          description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+            and `. _ : -`, up to 255 characters). Retrying with the same key returns
+            the original response instead of creating a duplicate. Leave empty if
+            you don''t need it.'
+          examples:
+          - 3f2b8c1e-6d7a-4b9e-9f00-2a1c5e7d8b94
+          title: Idempotency-Key
+        description: 'Any unique value, e.g. a UUID or `ci-run-42` (letters, digits
+          and `. _ : -`, up to 255 characters). Retrying with the same key returns
+          the original response instead of creating a duplicate. Leave empty if you
+          don''t need it.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectorCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Connector'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/connectors/{connector_id}:
+    get:
+      tags:
+      - intake
+      summary: Get a connector
+      operationId: get_connector_v1_connectors__connector_id__get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: connector_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Connector Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Connector'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    patch:
+      tags:
+      - intake
+      summary: Update a connector
+      operationId: update_connector_v1_connectors__connector_id__patch
+      security:
+      - ApiKey: []
+      parameters:
+      - name: connector_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Connector Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectorUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Connector'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+    delete:
+      tags:
+      - intake
+      summary: Delete a connector
+      description: Batches it created stay.
+      operationId: delete_connector_v1_connectors__connector_id__delete
+      security:
+      - ApiKey: []
+      parameters:
+      - name: connector_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Connector Id
+      responses:
+        '204':
+          description: Successful Response
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/connectors/{connector_id}/poll:
+    post:
+      tags:
+      - intake
+      summary: Check the bucket now
+      description: Lists the bucket right away instead of waiting for the next scheduled
+        check.
+      operationId: poll_now_v1_connectors__connector_id__poll_post
+      security:
+      - ApiKey: []
+      parameters:
+      - name: connector_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Connector Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollResult'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '409':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Conflict
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
+  /v1/connectors/{connector_id}/objects:
+    get:
+      tags:
+      - intake
+      summary: Files the connector has seen
+      operationId: list_objects_v1_connectors__connector_id__objects_get
+      security:
+      - ApiKey: []
+      parameters:
+      - name: connector_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Connector Id
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Maximum items per page.
+          default: 50
+          title: Limit
+        description: Maximum items per page.
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: '`next_cursor` from the previous page.'
+          title: Cursor
+        description: '`next_cursor` from the previous page.'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_ConnectorObject_'
+        '401':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unauthorized
+        '403':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Forbidden
+        '404':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Not Found
+        '422':
+          content:
+            application/problem+json: {}
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+          description: Unprocessable Entity
 components:
   schemas:
     AcceptanceRule:
@@ -6684,6 +7753,15 @@ components:
             type: number
           type: object
           title: Reported Metrics
+        delivered_count_from_files:
+          type: boolean
+          title: Delivered Count From Files
+          description: True while DCP fills delivered_count in from the files' record
+            count.
+        spend_is_estimate:
+          type: boolean
+          title: Spend Is Estimate
+          description: True while spend is an estimate (quoted rate × delivered_count).
         quality:
           anyOf:
           - $ref: '#/components/schemas/QualitySummary'
@@ -6769,6 +7847,8 @@ components:
       - attribute_counts
       - artifacts
       - reported_metrics
+      - delivered_count_from_files
+      - spend_is_estimate
       - quality
       - override_reason
       - notes
@@ -6841,19 +7921,27 @@ components:
           title: Received At
           description: Defaults to now.
         delivered_count:
-          type: integer
-          maximum: 1000000000.0
-          minimum: 0.0
+          anyOf:
+          - type: integer
+            maximum: 1000000000.0
+            minimum: 0.0
+          - type: 'null'
           title: Delivered Count
+          description: Items delivered. If left out (only allowed when files are listed),
+            DCP fills it in from the files' record count after the checks.
         spend:
           anyOf:
-          - type: number
-            minimum: 0.0
-          - type: string
+          - anyOf:
+            - type: number
+              minimum: 0.0
+            - type: string
+            examples:
+            - '25000.00'
+          - type: 'null'
           title: Spend
-          description: What this delivery cost.
-          examples:
-          - '25000.00'
+          description: 'What this delivery cost. If left out, DCP estimates it as
+            the allocation''s quoted rate × delivered_count (`spend_is_estimate: true`)
+            until it''s set.'
         currency:
           anyOf:
           - type: string
@@ -6918,8 +8006,6 @@ components:
       type: object
       required:
       - allocation_id
-      - delivered_count
-      - spend
       title: BatchCreate
       examples:
       - allocation_id: alc_01m5n7gwqfa18zhpw1zwh7w2zy
@@ -7395,6 +8481,309 @@ components:
       - summary
       - details
       title: Check
+    Connector:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - cnx_01m5n7gwqfa18zhpw1zwh7w2zy
+        project_id:
+          type: string
+          title: Project Id
+        data_source_id:
+          type: string
+          title: Data Source Id
+        type:
+          type: string
+          const: s3_watch
+          title: Type
+        description:
+          type: string
+          title: Description
+        bucket:
+          type: string
+          title: Bucket
+          examples:
+          - intake
+        prefix:
+          type: string
+          title: Prefix
+          examples:
+          - surge/
+        endpoint_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint Url
+        region:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Region
+        allocation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Allocation Id
+        poll_interval_seconds:
+          type: integer
+          title: Poll Interval Seconds
+        enabled:
+          type: boolean
+          title: Enabled
+        has_credentials:
+          type: boolean
+          title: Has Credentials
+          description: Whether keys are stored (they're never shown).
+        access_key_hint:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Access Key Hint
+          description: The last 4 characters of the stored access key id.
+          examples:
+          - …cess
+        next_poll_at:
+          type: string
+          format: date-time
+          title: Next Poll At
+        last_polled_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Polled At
+        last_found_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Found At
+          description: When it last found a new file.
+        last_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Error
+          examples:
+          - Access denied listing s3://intake/surge/
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - project_id
+      - data_source_id
+      - type
+      - description
+      - bucket
+      - prefix
+      - endpoint_url
+      - region
+      - allocation_id
+      - poll_interval_seconds
+      - enabled
+      - has_credentials
+      - access_key_hint
+      - next_poll_at
+      - last_polled_at
+      - last_found_at
+      - last_error
+      - created_at
+      - updated_at
+      title: Connector
+    ConnectorCreate:
+      properties:
+        data_source_id:
+          type: string
+          title: Data Source Id
+          description: New files become batches of this source.
+        type:
+          type: string
+          const: s3_watch
+          title: Type
+          default: s3_watch
+        description:
+          type: string
+          maxLength: 2000
+          title: Description
+          default: ''
+        bucket:
+          type: string
+          maxLength: 255
+          minLength: 3
+          pattern: ^[A-Za-z0-9.\-_]+$
+          title: Bucket
+        prefix:
+          type: string
+          maxLength: 1024
+          title: Prefix
+          description: Only files under this path.
+          default: ''
+        endpoint_url:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Endpoint Url
+          description: For S3-compatible storage. Empty for AWS S3.
+        region:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Region
+          examples:
+          - us-east-1
+        allocation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Allocation Id
+          description: Allocation the batches belong to. If empty, the source's single
+            active allocation is used at the time each file is found.
+        poll_interval_seconds:
+          type: integer
+          maximum: 86400.0
+          minimum: 15.0
+          title: Poll Interval Seconds
+          default: 60
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        credentials:
+          anyOf:
+          - $ref: '#/components/schemas/S3Credentials'
+          - type: 'null'
+          description: The bucket's access keys, stored encrypted and never shown
+            again. If empty, DCP's own S3 access is used (its AWS settings or cloud
+            role).
+      additionalProperties: false
+      type: object
+      required:
+      - data_source_id
+      - bucket
+      title: ConnectorCreate
+      examples:
+      - bucket: intake
+        credentials:
+          access_key_id: dcp-dev-access
+          secret_access_key: dcp-dev-secret-change-me
+        data_source_id: src_01m5n7gwqfa18zhpw1zwh7w2zy
+        description: Surge delivery bucket
+        endpoint_url: http://s3:7070
+        prefix: surge/
+    ConnectorObject:
+      properties:
+        key:
+          type: string
+          title: Key
+          examples:
+          - surge/delivery-2042.jsonl
+        size_bytes:
+          type: integer
+          title: Size Bytes
+        etag:
+          type: string
+          title: Etag
+        last_modified:
+          type: string
+          format: date-time
+          title: Last Modified
+        batch_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Batch Id
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+          description: Why this file didn't become a batch, if it didn't.
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - key
+      - size_bytes
+      - etag
+      - last_modified
+      - batch_id
+      - error
+      - created_at
+      - updated_at
+      title: ConnectorObject
+    ConnectorUpdate:
+      properties:
+        description:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Description
+        prefix:
+          anyOf:
+          - type: string
+            maxLength: 1024
+          - type: 'null'
+          title: Prefix
+        endpoint_url:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Endpoint Url
+        region:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Region
+        allocation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Allocation Id
+        poll_interval_seconds:
+          anyOf:
+          - type: integer
+            maximum: 86400.0
+            minimum: 15.0
+          - type: 'null'
+          title: Poll Interval Seconds
+        enabled:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Enabled
+        credentials:
+          anyOf:
+          - $ref: '#/components/schemas/S3Credentials'
+          - type: 'null'
+      additionalProperties: false
+      type: object
+      title: ConnectorUpdate
+      description: 'Only the fields you send are changed. Send `"credentials": null`
+        to remove stored keys
+
+        and use DCP''s own S3 access instead.'
+      examples:
+      - poll_interval_seconds: 300
     Coverage:
       properties:
         spec_version_id:
@@ -8250,6 +9639,263 @@ components:
       required:
       - status
       title: Health
+    InboundEndpoint:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - ihk_01m5n7gwqfa18zhpw1zwh7w2zy
+        project_id:
+          type: string
+          title: Project Id
+        data_source_id:
+          type: string
+          title: Data Source Id
+        url_path:
+          type: string
+          title: Url Path
+          description: Where to POST messages, relative to DCP's address.
+          examples:
+          - /v1/inbound/ihk_01m5n7gwqfa18zhpw1zwh7w2zy
+        description:
+          type: string
+          title: Description
+        enabled:
+          type: boolean
+          title: Enabled
+        secret_version:
+          type: integer
+          title: Secret Version
+        secret_rotated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Secret Rotated At
+        last_received_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Received At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+      type: object
+      required:
+      - id
+      - project_id
+      - data_source_id
+      - url_path
+      - description
+      - enabled
+      - secret_version
+      - secret_rotated_at
+      - last_received_at
+      - created_at
+      - updated_at
+      title: InboundEndpoint
+    InboundEndpointCreate:
+      properties:
+        data_source_id:
+          type: string
+          title: Data Source Id
+          description: Deliveries posted here are batches of this source.
+        description:
+          type: string
+          maxLength: 2000
+          title: Description
+          default: ''
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+      additionalProperties: false
+      type: object
+      required:
+      - data_source_id
+      title: InboundEndpointCreate
+      examples:
+      - data_source_id: src_01m5n7gwqfa18zhpw1zwh7w2zy
+        description: Surge delivery notifications
+    InboundEndpointCreated:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - ihk_01m5n7gwqfa18zhpw1zwh7w2zy
+        project_id:
+          type: string
+          title: Project Id
+        data_source_id:
+          type: string
+          title: Data Source Id
+        url_path:
+          type: string
+          title: Url Path
+          description: Where to POST messages, relative to DCP's address.
+          examples:
+          - /v1/inbound/ihk_01m5n7gwqfa18zhpw1zwh7w2zy
+        description:
+          type: string
+          title: Description
+        enabled:
+          type: boolean
+          title: Enabled
+        secret_version:
+          type: integer
+          title: Secret Version
+        secret_rotated_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Secret Rotated At
+        last_received_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Received At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        secret:
+          type: string
+          title: Secret
+          description: Give this to the sender. Also available from `/secret`.
+      type: object
+      required:
+      - id
+      - project_id
+      - data_source_id
+      - url_path
+      - description
+      - enabled
+      - secret_version
+      - secret_rotated_at
+      - last_received_at
+      - created_at
+      - updated_at
+      - secret
+      title: InboundEndpointCreated
+    InboundEndpointUpdate:
+      properties:
+        description:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Description
+        enabled:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Enabled
+      additionalProperties: false
+      type: object
+      title: InboundEndpointUpdate
+      examples:
+      - enabled: false
+    InboundMessageLog:
+      properties:
+        id:
+          type: string
+          title: Id
+        endpoint_id:
+          type: string
+          title: Endpoint Id
+        message_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Message Id
+          description: The sender's `webhook-id` header.
+        message_type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Message Type
+          examples:
+          - batch.delivered
+        status:
+          type: string
+          enum:
+          - processed
+          - rejected
+          title: Status
+        http_status:
+          type: integer
+          title: Http Status
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+          examples:
+          - Signature doesn't match.
+        batch_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Batch Id
+        received_at:
+          type: string
+          format: date-time
+          title: Received At
+      type: object
+      required:
+      - id
+      - endpoint_id
+      - message_id
+      - message_type
+      - status
+      - http_status
+      - error
+      - batch_id
+      - received_at
+      title: InboundMessageLog
+    InboundResult:
+      properties:
+        message_id:
+          type: string
+          title: Message Id
+        status:
+          type: string
+          const: processed
+          title: Status
+        batch_id:
+          type: string
+          title: Batch Id
+        batch_status:
+          type: string
+          title: Batch Status
+          examples:
+          - checking
+        duplicate:
+          type: boolean
+          title: Duplicate
+          description: True if this message was already processed earlier.
+      type: object
+      required:
+      - message_id
+      - status
+      - batch_id
+      - batch_status
+      - duplicate
+      title: InboundResult
     Manifest:
       properties:
         dataset_version_id:
@@ -8396,6 +10042,42 @@ components:
       - data
       - next_cursor
       title: Page[Capability]
+    Page_ConnectorObject_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ConnectorObject'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[ConnectorObject]
+    Page_Connector_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/Connector'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[Connector]
     Page_DataSource_:
       properties:
         data:
@@ -8486,6 +10168,42 @@ components:
       - data
       - next_cursor
       title: Page[Event]
+    Page_InboundEndpoint_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/InboundEndpoint'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[InboundEndpoint]
+    Page_InboundMessageLog_:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/InboundMessageLog'
+          type: array
+          title: Data
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Pass as `cursor` to get the next page. Null on the last page.
+      type: object
+      required:
+      - data
+      - next_cursor
+      title: Page[InboundMessageLog]
     Page_Project_:
       properties:
         data:
@@ -8612,6 +10330,38 @@ components:
       - data
       - next_cursor
       title: Page[WebhookEndpoint]
+    PollResult:
+      properties:
+        connector_id:
+          type: string
+          title: Connector Id
+        files_listed:
+          type: integer
+          title: Files Listed
+        new_batches:
+          items:
+            type: string
+          type: array
+          title: New Batches
+        updated_files:
+          items:
+            type: string
+          type: array
+          title: Updated Files
+          description: Files that changed since last seen.
+        errors:
+          items:
+            type: string
+          type: array
+          title: Errors
+      type: object
+      required:
+      - connector_id
+      - files_listed
+      - new_batches
+      - updated_files
+      - errors
+      title: PollResult
     Portfolio:
       properties:
         project_id:
@@ -9213,6 +10963,30 @@ components:
       examples:
       - priority: P0
         spec_version_id: spv_01m5n7gwqfa18zhpw1zwh7w2zy
+    S3Credentials:
+      properties:
+        access_key_id:
+          type: string
+          maxLength: 256
+          minLength: 1
+          title: Access Key Id
+        secret_access_key:
+          type: string
+          maxLength: 1024
+          minLength: 1
+          title: Secret Access Key
+        session_token:
+          anyOf:
+          - type: string
+            maxLength: 4096
+          - type: 'null'
+          title: Session Token
+      additionalProperties: false
+      type: object
+      required:
+      - access_key_id
+      - secret_access_key
+      title: S3Credentials
     SourceKindRow:
       properties:
         spend:

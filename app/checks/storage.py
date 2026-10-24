@@ -59,13 +59,14 @@ class HashingReader(io.RawIOBase):
 
 
 @contextmanager
-def open_artifact(uri: str) -> Iterator[HashingReader]:
+def open_artifact(uri: str, s3_client: Any = None) -> Iterator[HashingReader]:
+    """Open a delivered file. `s3_client` overrides DCP's own S3 access (e.g. a connector's)."""
     parts = urlsplit(uri)
     if parts.scheme == "file":
         with _open_local(parts.path) as raw:
             yield HashingReader(raw)
     elif parts.scheme == "s3":
-        body = _open_s3(parts.netloc, parts.path.lstrip("/"))
+        body = _open_s3(parts.netloc, parts.path.lstrip("/"), s3_client)
         try:
             yield HashingReader(body)
         finally:
@@ -89,11 +90,11 @@ def _open_local(raw_path: str) -> Iterator[BinaryIO]:
         raise StorageError(f"Can't read {path}: {exc.strerror}") from None
 
 
-def _open_s3(bucket: str, key: str) -> Any:
+def _open_s3(bucket: str, key: str, client: Any = None) -> Any:
     if not bucket or not key:
         raise StorageError("s3:// URIs need a bucket and a key, e.g. s3://bucket/path/file.jsonl")
     try:
-        return s3_client_factory().get_object(Bucket=bucket, Key=key)["Body"]
+        return (client or s3_client_factory()).get_object(Bucket=bucket, Key=key)["Body"]
     except ClientError as exc:
         code = exc.response.get("Error", {}).get("Code", "")
         if code in ("NoSuchKey", "404"):

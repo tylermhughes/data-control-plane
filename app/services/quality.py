@@ -85,6 +85,11 @@ def _finish(session: Session, run: QualityRun) -> None:
     batch = session.get_one(Batch, run.batch_id)
     if batch.status == "checking":
         batch.status = "passed" if run.status == "passed" else "failed"
+    if batch.status in ("passed", "failed"):  # undecided: DCP may still fill figures in
+        if batch.delivered_count_from_files and "record_count" in run.metrics:
+            batch.delivered_count = run.metrics["record_count"]
+        if batch.spend_is_estimate:
+            batch.spend = batch.allocation.quoted_unit_rate * batch.delivered_count
     session.flush()
     _emit_run(session, run, CLI)
     events.emit(

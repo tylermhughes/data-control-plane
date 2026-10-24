@@ -22,6 +22,7 @@ from collections import Counter, defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlsplit
 
 from jsonschema import Draft202012Validator
 from sqlalchemy import delete, insert, text
@@ -30,6 +31,7 @@ from sqlalchemy.orm import Session
 from app.checks.storage import HashingReader, StorageError, open_artifact
 from app.config import get_settings
 from app.models import Batch, QualityRun, RecordFingerprint
+from app.services import connectors
 
 RECORD_FORMATS = ("jsonl", "csv")
 EXAMPLES = 5
@@ -103,12 +105,13 @@ def _records(reader: HashingReader, fmt: str, c: Collected) -> Iterator[dict[str
             text_stream.detach()
 
 
-def collect(batch: Batch) -> Collected:
+def collect(batch: Batch, s3_clients: dict[str, Any] | None = None) -> Collected:
     c = Collected()
     version = batch.spec_version
     validator = Draft202012Validator(version.record_schema) if version.record_schema else None
     attribute_names = [a["name"] for a in version.attributes]
     limit = get_settings().dcp_check_max_records
+    s3_clients = s3_clients or {}
 
     for artifact in batch.artifacts:
         uri, fmt = artifact["uri"], artifact["format"]
@@ -116,7 +119,7 @@ def collect(batch: Batch) -> Collected:
         c.files.append(info)
         records_in_file = 0
         try:
-            with open_artifact(uri) as reader:
+            with open_artifact(uri, s3_client=s3_clients.get(urlsplit(uri).netloc)) as reader:
                 if fmt in RECORD_FORMATS:
                     for record in _records(reader, fmt, c):
                         if c.records >= limit:
@@ -214,7 +217,7 @@ def execute(session: Session, run: QualityRun) -> None:
     """Run every check and fill in `run` (status, checks, metrics, attribute counts)."""
     batch = session.get_one(Batch, run.batch_id)
     version = batch.spec_version
-    c = collect(batch)
+    c = collect(batch, connectors.s3_clients_for(session, batch))
     _store_fingerprints(session, batch, c.fingerprints)
     in_project = _duplicates_in_project(session, batch) if c.fingerprints else 0
 

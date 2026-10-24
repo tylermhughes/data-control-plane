@@ -56,6 +56,39 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Local S3-compatible storage for trying the bucket watcher (dev profile only):
+  #   docker compose --profile dev up --build
+  # Every folder in ./data/s3 is a bucket; drop files in to "deliver" them.
+  # From DCP use endpoint http://s3:7070; from this machine http://localhost:7070.
+  s3:
+    profiles: ["dev"]
+    image: versity/versitygw:v1.8.0
+    command:
+      - --access
+      - ${DCP_DEV_S3_ACCESS_KEY:-dcp-dev-access}
+      - --secret
+      - ${DCP_DEV_S3_SECRET_KEY:-dcp-dev-secret-change-me}
+      - posix
+      - --sidecar
+      - /meta
+      - /buckets
+    volumes:
+      - ./data/s3:/buckets
+      - s3-meta:/meta
+    ports:
+      - "127.0.0.1:7070:7070"
+
+  # Throwaway S3-compatible storage for ./scripts/check.sh (test profile, in memory).
+  s3-test:
+    profiles: ["test"]
+    image: versity/versitygw:v1.8.0
+    command: ["--access", "test-access", "--secret", "test-secret-key", "posix", "--sidecar", "/meta", "/buckets"]
+    tmpfs:
+      - /buckets
+      - /meta
+    ports:
+      - "127.0.0.1:57070:7070"
+
   # Throwaway database for ./scripts/check.sh. Only starts with --profile test,
   # keeps data in memory, and is reachable only from this machine.
   db-test:
@@ -77,3 +110,4 @@ services:
 
 volumes:
   db-data:
+  s3-meta:

@@ -7,6 +7,7 @@ due date and notes (the quoted rate, currency and unit are the commitment cost r
 
 from collections.abc import Sequence
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.errors import Conflict, Invalid
@@ -158,3 +159,19 @@ def delete_allocation(session: Session, actor: Principal, alloc_id: str) -> None
     _emit(session, "allocation.deleted", alloc, actor)
     session.delete(alloc)
     session.flush()
+
+
+def single_active(session: Session, data_source_id: str) -> str:
+    """The source's only active allocation, for deliveries that don't name one."""
+    active = session.scalars(
+        select(Allocation.id).where(
+            Allocation.data_source_id == data_source_id, Allocation.status == "active"
+        )
+    ).all()
+    if len(active) == 1:
+        return active[0]
+    if not active:
+        raise Conflict("This data source has no active allocation to deliver against.")
+    raise Conflict(
+        f"This data source has {len(active)} active allocations; say which in allocation_id."
+    )

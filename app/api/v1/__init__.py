@@ -9,6 +9,7 @@ from app.api.v1 import (
     capabilities,
     data_sources,
     datasets,
+    intake,
     me,
     projects,
     quality,
@@ -36,3 +37,6 @@ router.include_router(datasets.versions)
 router.include_router(datasets.evals)
 router.include_router(reports.router)
 router.include_router(quality.router)
+router.include_router(intake.inbound_endpoints)
+router.include_router(intake.inbound_receiver)
+router.include_router(intake.connector_routes)

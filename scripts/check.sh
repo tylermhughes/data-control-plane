@@ -25,8 +25,9 @@ fi
 step "Tests (pytest, using a throwaway database)"
 # Compose needs POSTGRES_PASSWORD to read the file, even though db-test doesn't use it.
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-not-used-by-tests}" \
-  docker compose --profile test up -d --wait db-test
+  docker compose --profile test up -d --wait db-test s3-test
 TEST_DATABASE_URL="postgresql+psycopg://dcp:dcp-test@127.0.0.1:55432/dcp_test" \
+TEST_S3_ENDPOINT_URL="http://127.0.0.1:57070" \
   uv run pytest "$@"
 
 printf '\n\033[1;32mAll checks passed.\033[0m\n'
