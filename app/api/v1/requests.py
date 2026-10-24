@@ -111,7 +111,7 @@ def cancel_request(request_id: str, session: SessionDep, principal: PrincipalDep
 
 
 @router.get("/{request_id}/coverage", summary="Coverage vs targets", responses=READ_ERRORS)
-def get_coverage(request_id: str, session: SessionDep, principal: PrincipalDep) -> Coverage:
+def get_request_coverage(request_id: str, session: SessionDep, principal: PrincipalDep) -> Coverage:
     """All accepted batches of this request, against its current spec version's coverage
     targets. Values more than the spec's tolerance below target are `below` and listed in
     `gaps`."""

@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.routing import APIRoute
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -17,6 +18,12 @@ from app.services import api_keys
 logging.basicConfig(level=get_settings().log_level)
 log_filters.install()
 logger = logging.getLogger("app")
+
+
+def operation_id(route: APIRoute) -> str:
+    """Operation ids are the endpoint function names (list_batches), so generated clients
+    get readable method names. They must be unique; a test checks that."""
+    return route.name
 
 
 @asynccontextmanager
@@ -35,7 +42,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="Data Control Plane API",
-    version="0.1.0",
+    version="0.9.0",
     description=(
         "The control plane for AI training data: plan, route, check and measure data "
         "from every source. Everything the product does is available through this API.\n\n"
@@ -45,6 +52,7 @@ app = FastAPI(
         "**Retries:** POST requests accept an `Idempotency-Key` header."
     ),
     lifespan=lifespan,
+    generate_unique_id_function=operation_id,
 )
 problems.install(app)
 app.include_router(health.router)

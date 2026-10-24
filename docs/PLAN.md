@@ -17,7 +17,7 @@ This file is kept up to date as each milestone moves forward (see the status tab
 | M6 | Automated file checks | ✅ Committed 2026-10-23 (manual test not yet confirmed) |
 | M7 | Inbound webhooks + S3 watcher | ✅ Committed 2026-10-23 (manual test not yet confirmed) |
 | M8 | Recommendations v0 | ✅ Done (tested by Tyler 2026-10-23) |
-| M9 | Headless polish | ⚪ Not started |
+| M9 | Headless polish | ✅ Done (tested by Tyler 2026-10-23) |
 
 ## Architecture
 
@@ -148,4 +148,8 @@ Testing uses **`http://localhost:8000/docs` → "Try it out"**, with curl as a b
 - 2026-10-23 (M8): `GET /v1/capabilities/{id}/diagnosis` scores versions (shared with the portfolio). It's "flattening" when the latest points per 10K fall below the capability's `flattening_threshold` (new field, default 0.5) × the average of earlier versions, which needs 2+ scored versions with spend. Flattening + coverage gaps in the latest version → `refine_spec`, with suggested targets (short values raised by their shortfall, others scaled to the same total, rounding kept within the total). Flattening with no gaps → `investigate` (label quality, eval, model and saturation are "not_checked"). Never "cut spend" in v0.
 - 2026-10-23 (M8): `POST /v1/capabilities/{id}/diagnosis/draft-spec` creates the suggested targets as a draft spec version ("Drafted by Data Control Plane …") for a person to approve. It's refused unless the recommendation is refine_spec, or if the spec already has a draft.
 - 2026-10-23 (M8): `scripts/demo.py --diagnosis` adds step 7 (a weak third delivery → flattening → refine the spec → drafted spec → plan for the next request).
+- 2026-10-23 (M9): operation ids are the endpoint function names (unique, enforced by a test). That means readable client methods, and oasdiff found no breaking change. Five duplicate function names were renamed (e.g. `get_batch_coverage`, `create_spec_version`); URLs are unchanged.
+- 2026-10-23 (M9): the Python client is generated with openapi-python-client 0.29.1 (dev tool, approved) into `clients/python` (needs Python 3.11+, httpx and attrs). The `dcp` CLI in `clients/cli` discovers every operation from the client. check.sh regenerates the client and fails if it differs.
+- 2026-10-23 (M9): check.sh adds oasdiff v1.33.0 (Docker, approved; compares openapi.yaml with `DCP_API_BASE_REF`, default main) and Schemathesis 4.30.0 fuzz tests (approved; 15 examples per operation, all 109 operations). Fuzzing found three issues, all fixed: incomplete `Allow` headers on 405; 400 for unreadable bodies (now 422); and a **500 crash on NUL characters** in text (database data errors now return 422). The negative-data check is off because unknown query parameters are deliberately ignored.
+- 2026-10-23 (M9): `scripts/backup.sh` and `scripts/restore.sh` (restore needs `--yes`), `docs/OPERATIONS.md`, `CHANGELOG.md`, version 0.9.0, and examples `record_training_run.py` and `quality_gate.py` (a first scriptable training gate). The GitHub Actions workflow is written but not yet run (the repo isn't on GitHub). Allocation share cap: left as is (Tyler).
 - 2026-10-23 (M0): MinIO is deferred to M6, the first milestone that reads files. oasdiff is deferred until there is a first release to compare against.

@@ -17,3 +17,6 @@ data/*
 
 # macOS
 .DS_Store
+
+# Database backups made by scripts/backup.sh
+backups/

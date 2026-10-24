@@ -34,9 +34,11 @@ Schemathesis, oasdiff, Docker Compose.
 - `migrations/`, `openapi.yaml` (committed), `tests/` (mirrors `app/`, plus `tests/e2e/`).
 
 ## Commands
-- Start: `docker compose up --build`
-- All checks (lint, types, tests, spec): `./scripts/check.sh`
+- Start: `docker compose up --build` (add `--profile dev` for the local S3 server)
+- All checks (lint, types, spec, breaking changes, client, tests incl. fuzzing): `./scripts/check.sh`
 - Regenerate spec: `uv run python -m app.export_openapi > openapi.yaml`
+- Regenerate the Python client after any API change: `./scripts/generate_client.sh`
+- Backup / restore: `./scripts/backup.sh`, `./scripts/restore.sh <file> --yes` (see docs/OPERATIONS.md)
 - New migration: `uv run alembic revision --autogenerate -m "<what changed>"`
 
 ## Rules for Claude
@@ -45,8 +47,9 @@ Schemathesis, oasdiff, Docker Compose.
    copy-pasteable curl commands as a backup.
 2. **One milestone at a time**, per `docs/PLAN.md`. Keep `docs/PLAN.md` updated
    (status, decisions, changes) as part of each milestone.
-3. **OpenAPI is the contract.** Update `openapi.yaml` in the same commit as any API
-   change. Ask before any breaking change. Add fields; don't rename or remove them.
+3. **OpenAPI is the contract.** Update `openapi.yaml` and regenerate `clients/python` in the
+   same commit as any API change. Ask before any breaking change (check.sh runs oasdiff
+   against main). Add fields; don't rename or remove them. Record changes in CHANGELOG.md.
 4. **Tests with every change** (services, every endpoint including auth and validation
    failures, one e2e per milestone). Only call work done when `./scripts/check.sh`
    passes. If it fails, say so and show the output.

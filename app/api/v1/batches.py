@@ -130,7 +130,7 @@ def reject_batch(
 
 
 @router.get("/{batch_id}/coverage", summary="Coverage vs targets", responses=READ_ERRORS)
-def get_coverage(batch_id: str, session: SessionDep, principal: PrincipalDep) -> Coverage:
+def get_batch_coverage(batch_id: str, session: SessionDep, principal: PrincipalDep) -> Coverage:
     """This batch's accepted items per attribute value, against its spec version's coverage
     targets. Values more than the spec's tolerance below target are `below` and listed in
     `gaps`. Uses the batch's `attribute_counts`, so it's empty if none were recorded."""

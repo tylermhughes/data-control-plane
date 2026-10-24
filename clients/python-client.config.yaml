@@ -1,0 +1,7 @@
+# Settings for generating clients/python from openapi.yaml with openapi-python-client.
+# Regenerate with: ./scripts/generate_client.sh
+project_name_override: dcp-client
+package_name_override: dcp_client
+post_hooks:
+  - "ruff check . --fix-only --quiet --exit-zero"
+  - "ruff format . --quiet"

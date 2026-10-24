@@ -77,6 +77,24 @@ python3 scripts/webhook_receiver.py --secret whsec_...      # add --fail to test
 Register `http://host.docker.internal:9000/` as the endpoint URL. That's how DCP, running in Docker,
 reaches your machine. If macOS asks whether Python may accept incoming connections, click **Allow**.
 
+## Use it from scripts
+
+- **Python client** (generated from `openapi.yaml`): `clients/python`
+- **Command line**:
+  ```
+  cd clients/cli && uv sync
+  export DCP_URL=http://localhost:8000 DCP_API_KEY=dcp_...
+  uv run dcp list
+  uv run dcp batches list-batches --status failed
+  ```
+- **Examples for CI**: `examples/record_training_run.py` (record a training run) and
+  `examples/quality_gate.py` (refuse to train on a dataset version that isn't clean).
+
+## Running it in production
+
+See [`docs/OPERATIONS.md`](docs/OPERATIONS.md) for backups, restores, upgrades and monitoring,
+and [`CHANGELOG.md`](CHANGELOG.md) for what changed between versions.
+
 ## Check everything
 
 ```

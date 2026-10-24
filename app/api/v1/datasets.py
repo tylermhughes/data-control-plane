@@ -98,7 +98,7 @@ def delete_dataset(dataset_id: str, session: SessionDep, principal: PrincipalDep
     summary="Create the next version (frozen)",
     responses=WRITE_ERRORS,
 )
-def create_version(
+def create_dataset_version(
     dataset_id: str,
     body: DatasetVersionCreate,
     session: SessionDep,
@@ -122,7 +122,7 @@ def create_version(
 
 
 @versions.get("", summary="List dataset versions", responses=READ_ERRORS)
-def list_versions(
+def list_dataset_versions(
     session: SessionDep,
     principal: PrincipalDep,
     project_id: ProjectFilter = None,
@@ -137,7 +137,9 @@ def list_versions(
 
 
 @versions.get("/{version_id}", summary="Get a dataset version", responses=READ_ERRORS)
-def get_version(version_id: str, session: SessionDep, principal: PrincipalDep) -> DatasetVersion:
+def get_dataset_version(
+    version_id: str, session: SessionDep, principal: PrincipalDep
+) -> DatasetVersion:
     return datasets.version_schema(datasets.get_version(session, principal, version_id))
 
 
@@ -154,7 +156,7 @@ def get_manifest(version_id: str, session: SessionDep, principal: PrincipalDep) 
     summary="Delete a dataset version",
     responses=WRITE_ERRORS,
 )
-def delete_version(version_id: str, session: SessionDep, principal: PrincipalDep) -> None:
+def delete_dataset_version(version_id: str, session: SessionDep, principal: PrincipalDep) -> None:
     """Only versions with no eval results that no other version uses as a baseline."""
     datasets.delete_version(session, principal, version_id)
     session.commit()

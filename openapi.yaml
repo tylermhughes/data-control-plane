@@ -9,14 +9,14 @@ info:
     **Authentication:** send your API key as `Authorization: Bearer dcp_...` (in these
     docs, use the **Authorize** button). **Errors** use the RFC 9457 problem format.
     **Retries:** POST requests accept an `Idempotency-Key` header.'
-  version: 0.1.0
+  version: 0.9.0
 paths:
   /healthz:
     get:
       tags:
       - health
       summary: Is the server running?
-      operationId: healthz_healthz_get
+      operationId: healthz
       responses:
         '200':
           description: Successful Response
@@ -29,7 +29,7 @@ paths:
       tags:
       - health
       summary: Can the server reach the database?
-      operationId: readyz_readyz_get
+      operationId: readyz
       responses:
         '200':
           description: Successful Response
@@ -50,7 +50,7 @@ paths:
       summary: Which API key am I using?
       description: Works with any valid key. Handy for checking that a key works and
         what it can do.
-      operationId: me_v1_me_get
+      operationId: me
       responses:
         '200':
           description: Successful Response
@@ -80,7 +80,7 @@ paths:
       - projects
       summary: List projects
       description: Admin keys see every project. Project keys see only their own.
-      operationId: list_projects_v1_projects_get
+      operationId: list_projects
       security:
       - ApiKey: []
       parameters:
@@ -145,7 +145,7 @@ paths:
       - projects
       summary: Create a project
       description: Needs an admin key with write access. Names must be unique.
-      operationId: create_project_v1_projects_post
+      operationId: create_project
       security:
       - ApiKey: []
       parameters:
@@ -221,7 +221,7 @@ paths:
       tags:
       - projects
       summary: Get a project
-      operationId: get_project_v1_projects__project_id__get
+      operationId: get_project
       security:
       - ApiKey: []
       parameters:
@@ -272,7 +272,7 @@ paths:
       summary: Update a project
       description: Needs an admin key with write access. Only the fields you send
         are changed.
-      operationId: update_project_v1_projects__project_id__patch
+      operationId: update_project
       security:
       - ApiKey: []
       parameters:
@@ -336,7 +336,7 @@ paths:
       summary: Delete a project
       description: Needs an admin key with write access. Revoke the project's API
         keys first.
-      operationId: delete_project_v1_projects__project_id__delete
+      operationId: delete_project
       security:
       - ApiKey: []
       parameters:
@@ -391,7 +391,7 @@ paths:
       summary: List API keys
       description: Needs an admin key. Includes revoked keys (see `revoked_at`). Secrets
         are never shown.
-      operationId: list_keys_v1_api_keys_get
+      operationId: list_keys
       security:
       - ApiKey: []
       parameters:
@@ -465,7 +465,7 @@ paths:
         create a new key
 
         if it was lost.'
-      operationId: create_key_v1_api_keys_post
+      operationId: create_key
       security:
       - ApiKey: []
       parameters:
@@ -541,7 +541,7 @@ paths:
       tags:
       - api keys
       summary: Get an API key
-      operationId: get_key_v1_api_keys__key_id__get
+      operationId: get_key
       security:
       - ApiKey: []
       parameters:
@@ -590,7 +590,7 @@ paths:
       tags:
       - api keys
       summary: Rename an API key
-      operationId: rename_key_v1_api_keys__key_id__patch
+      operationId: rename_key
       security:
       - ApiKey: []
       parameters:
@@ -656,7 +656,7 @@ paths:
         key does nothing.
 
         The last active admin key with write access cannot be revoked.'
-      operationId: revoke_key_v1_api_keys__key_id__delete
+      operationId: revoke_key
       security:
       - ApiKey: []
       parameters:
@@ -709,7 +709,7 @@ paths:
       tags:
       - capabilities
       summary: List capabilities
-      operationId: list_capabilities_v1_capabilities_get
+      operationId: list_capabilities
       security:
       - ApiKey: []
       parameters:
@@ -788,7 +788,7 @@ paths:
 
         `value_per_point` is what one point of improvement is worth; reports use it
         for ROI.'
-      operationId: create_capability_v1_capabilities_post
+      operationId: create_capability
       security:
       - ApiKey: []
       parameters:
@@ -864,7 +864,7 @@ paths:
       tags:
       - capabilities
       summary: Get a capability
-      operationId: get_capability_v1_capabilities__capability_id__get
+      operationId: get_capability
       security:
       - ApiKey: []
       parameters:
@@ -913,7 +913,7 @@ paths:
       tags:
       - capabilities
       summary: Update a capability
-      operationId: update_capability_v1_capabilities__capability_id__patch
+      operationId: update_capability
       security:
       - ApiKey: []
       parameters:
@@ -975,7 +975,7 @@ paths:
       tags:
       - capabilities
       summary: Delete a capability
-      operationId: delete_capability_v1_capabilities__capability_id__delete
+      operationId: delete_capability
       security:
       - ApiKey: []
       parameters:
@@ -1028,7 +1028,7 @@ paths:
       tags:
       - data sources
       summary: List data sources
-      operationId: list_sources_v1_data_sources_get
+      operationId: list_sources
       security:
       - ApiKey: []
       parameters:
@@ -1109,7 +1109,7 @@ paths:
         dataset.
 
         Rights fields are recorded now and enforced by the training gate later.'
-      operationId: create_source_v1_data_sources_post
+      operationId: create_source
       security:
       - ApiKey: []
       parameters:
@@ -1185,7 +1185,7 @@ paths:
       tags:
       - data sources
       summary: Get a data source
-      operationId: get_source_v1_data_sources__source_id__get
+      operationId: get_source
       security:
       - ApiKey: []
       parameters:
@@ -1235,7 +1235,7 @@ paths:
       - data sources
       summary: Update a data source
       description: 'Send `"rights_expires_at": null` to clear the expiry date.'
-      operationId: update_source_v1_data_sources__source_id__patch
+      operationId: update_source
       security:
       - ApiKey: []
       parameters:
@@ -1297,7 +1297,7 @@ paths:
       tags:
       - data sources
       summary: Delete a data source
-      operationId: delete_source_v1_data_sources__source_id__delete
+      operationId: delete_source
       security:
       - ApiKey: []
       parameters:
@@ -1350,7 +1350,7 @@ paths:
       tags:
       - specs
       summary: List specs
-      operationId: list_specs_v1_specs_get
+      operationId: list_specs
       security:
       - ApiKey: []
       parameters:
@@ -1432,7 +1432,7 @@ paths:
 
         the same version. Each attribute''s target shares must add up to 1 (100%)
         or less.'
-      operationId: create_spec_v1_specs_post
+      operationId: create_spec
       security:
       - ApiKey: []
       parameters:
@@ -1508,7 +1508,7 @@ paths:
       tags:
       - specs
       summary: Get a spec
-      operationId: get_spec_v1_specs__spec_id__get
+      operationId: get_spec
       security:
       - ApiKey: []
       parameters:
@@ -1557,7 +1557,7 @@ paths:
       tags:
       - specs
       summary: Rename or re-describe a spec
-      operationId: update_spec_v1_specs__spec_id__patch
+      operationId: update_spec
       security:
       - ApiKey: []
       parameters:
@@ -1620,7 +1620,7 @@ paths:
       - specs
       summary: Delete a spec and all its versions
       description: From M3 on, specs used by a request can't be deleted.
-      operationId: delete_spec_v1_specs__spec_id__delete
+      operationId: delete_spec
       security:
       - ApiKey: []
       parameters:
@@ -1673,7 +1673,7 @@ paths:
       tags:
       - specs
       summary: List a spec's versions
-      operationId: list_versions_v1_specs__spec_id__versions_get
+      operationId: list_spec_versions
       security:
       - ApiKey: []
       parameters:
@@ -1747,7 +1747,7 @@ paths:
         what changes; send
 
         `{}` to start from an exact copy. Fails if the spec already has a draft.'
-      operationId: create_version_v1_specs__spec_id__versions_post
+      operationId: create_spec_version
       security:
       - ApiKey: []
       parameters:
@@ -1829,7 +1829,7 @@ paths:
       tags:
       - specs
       summary: Get one version of a spec
-      operationId: get_version_v1_specs__spec_id__versions__version__get
+      operationId: get_spec_version
       security:
       - ApiKey: []
       parameters:
@@ -1891,7 +1891,7 @@ paths:
         kept.
 
         Approved versions can''t change (409).'
-      operationId: update_version_v1_specs__spec_id__versions__version__patch
+      operationId: update_spec_version
       security:
       - ApiKey: []
       parameters:
@@ -1963,7 +1963,7 @@ paths:
       - specs
       summary: Discard a draft version
       description: Drafts only. Approved versions can never be deleted.
-      operationId: delete_version_v1_specs__spec_id__versions__version__delete
+      operationId: delete_spec_version
       security:
       - ApiKey: []
       parameters:
@@ -2029,7 +2029,7 @@ paths:
         who approved it
 
         (`approved_by`) and which API key did it.'
-      operationId: approve_version_v1_specs__spec_id__versions__version__approve_post
+      operationId: approve_spec_version
       security:
       - ApiKey: []
       parameters:
@@ -2101,7 +2101,7 @@ paths:
       tags:
       - requests
       summary: List requests
-      operationId: list_requests_v1_requests_get
+      operationId: list_requests
       security:
       - ApiKey: []
       parameters:
@@ -2205,7 +2205,7 @@ paths:
 
         project is taken from the capability. Attach an approved spec version, then
         open it.'
-      operationId: create_request_v1_requests_post
+      operationId: create_request
       security:
       - ApiKey: []
       parameters:
@@ -2281,7 +2281,7 @@ paths:
       tags:
       - requests
       summary: Get a request
-      operationId: get_request_v1_requests__request_id__get
+      operationId: get_request
       security:
       - ApiKey: []
       parameters:
@@ -2334,7 +2334,7 @@ paths:
         new allocations only;
 
         existing allocations keep the version they were quoted against.'
-      operationId: update_request_v1_requests__request_id__patch
+      operationId: update_request
       security:
       - ApiKey: []
       parameters:
@@ -2397,7 +2397,7 @@ paths:
       - requests
       summary: Delete a request
       description: Only requests with no allocations. Otherwise cancel it.
-      operationId: delete_request_v1_requests__request_id__delete
+      operationId: delete_request
       security:
       - ApiKey: []
       parameters:
@@ -2454,7 +2454,7 @@ paths:
         only be activated on
 
         open requests.'
-      operationId: open_request_v1_requests__request_id__open_post
+      operationId: open_request
       security:
       - ApiKey: []
       parameters:
@@ -2515,7 +2515,7 @@ paths:
         that never started
 
         (planned) are cancelled.'
-      operationId: close_request_v1_requests__request_id__close_post
+      operationId: close_request
       security:
       - ApiKey: []
       parameters:
@@ -2576,7 +2576,7 @@ paths:
         are cancelled too;
 
         completed ones are kept as they are.'
-      operationId: cancel_request_v1_requests__request_id__cancel_post
+      operationId: cancel_request
       security:
       - ApiKey: []
       parameters:
@@ -2640,7 +2640,7 @@ paths:
         listed in
 
         `gaps`.'
-      operationId: get_coverage_v1_requests__request_id__coverage_get
+      operationId: get_request_coverage
       security:
       - ApiKey: []
       parameters:
@@ -2690,7 +2690,7 @@ paths:
       tags:
       - allocations
       summary: List allocations
-      operationId: list_allocations_v1_allocations_get
+      operationId: list_allocations
       security:
       - ApiKey: []
       parameters:
@@ -2808,7 +2808,7 @@ paths:
 
         Allocations may add up to more than the request''s quantity (e.g. to cover
         rejects).'
-      operationId: create_allocation_v1_allocations_post
+      operationId: create_allocation
       security:
       - ApiKey: []
       parameters:
@@ -2884,7 +2884,7 @@ paths:
       tags:
       - allocations
       summary: Get an allocation
-      operationId: get_allocation_v1_allocations__allocation_id__get
+      operationId: get_allocation
       security:
       - ApiKey: []
       parameters:
@@ -2937,7 +2937,7 @@ paths:
         (the quoted rate,
 
         currency and unit are the commitment). Complete or cancelled: nothing.'
-      operationId: update_allocation_v1_allocations__allocation_id__patch
+      operationId: update_allocation
       security:
       - ApiKey: []
       parameters:
@@ -3000,7 +3000,7 @@ paths:
       - allocations
       summary: Delete a planned allocation
       description: Planned allocations only. Cancel active ones instead.
-      operationId: delete_allocation_v1_allocations__allocation_id__delete
+      operationId: delete_allocation
       security:
       - ApiKey: []
       parameters:
@@ -3054,7 +3054,7 @@ paths:
       - allocations
       summary: Start the work
       description: Planned → active. The request must be open.
-      operationId: activate_allocation_v1_allocations__allocation_id__activate_post
+      operationId: activate_allocation
       security:
       - ApiKey: []
       parameters:
@@ -3112,7 +3112,7 @@ paths:
       - allocations
       summary: Mark the work complete
       description: Active → complete.
-      operationId: complete_allocation_v1_allocations__allocation_id__complete_post
+      operationId: complete_allocation
       security:
       - ApiKey: []
       parameters:
@@ -3170,7 +3170,7 @@ paths:
       - allocations
       summary: Cancel an allocation
       description: Planned or active → cancelled.
-      operationId: cancel_allocation_v1_allocations__allocation_id__cancel_post
+      operationId: cancel_allocation
       security:
       - ApiKey: []
       parameters:
@@ -3227,7 +3227,7 @@ paths:
       tags:
       - batches
       summary: List batches
-      operationId: list_batches_v1_batches_get
+      operationId: list_batches
       security:
       - ApiKey: []
       parameters:
@@ -3364,7 +3364,7 @@ paths:
         (200) and
 
         records what changed; identical data changes nothing.'
-      operationId: create_batch_v1_batches_post
+      operationId: create_batch
       security:
       - ApiKey: []
       parameters:
@@ -3446,7 +3446,7 @@ paths:
       tags:
       - batches
       summary: Get a batch
-      operationId: get_batch_v1_batches__batch_id__get
+      operationId: get_batch
       security:
       - ApiKey: []
       parameters:
@@ -3497,7 +3497,7 @@ paths:
       summary: Update a batch
       description: 'Undecided (`received`) batches: any field. Accepted or rejected:
         notes only.'
-      operationId: update_batch_v1_batches__batch_id__patch
+      operationId: update_batch
       security:
       - ApiKey: []
       parameters:
@@ -3561,7 +3561,7 @@ paths:
       summary: Delete an undecided batch
       description: Only batches still `received`. Decided batches are part of the
         record.
-      operationId: delete_batch_v1_batches__batch_id__delete
+      operationId: delete_batch
       security:
       - ApiKey: []
       parameters:
@@ -3624,7 +3624,7 @@ paths:
         the accepted
 
         count for any attribute. Final: afterwards only notes can change.'
-      operationId: accept_batch_v1_batches__batch_id__accept_post
+      operationId: accept_batch
       security:
       - ApiKey: []
       parameters:
@@ -3691,7 +3691,7 @@ paths:
         checks run. Final:
 
         afterwards only notes can change.'
-      operationId: reject_batch_v1_batches__batch_id__reject_post
+      operationId: reject_batch
       security:
       - ApiKey: []
       parameters:
@@ -3762,7 +3762,7 @@ paths:
 
         `gaps`. Uses the batch''s `attribute_counts`, so it''s empty if none were
         recorded.'
-      operationId: get_coverage_v1_batches__batch_id__coverage_get
+      operationId: get_batch_coverage
       security:
       - ApiKey: []
       parameters:
@@ -3819,7 +3819,7 @@ paths:
         `passed` or
 
         `failed`. Decided batches keep their decision; the run only adds findings.'
-      operationId: request_checks_v1_batches__batch_id__checks_post
+      operationId: request_checks
       security:
       - ApiKey: []
       parameters:
@@ -3876,7 +3876,7 @@ paths:
       tags:
       - batches
       summary: Check runs on this batch
-      operationId: list_quality_runs_v1_batches__batch_id__quality_runs_get
+      operationId: list_quality_runs
       security:
       - ApiKey: []
       parameters:
@@ -3947,7 +3947,7 @@ paths:
       tags:
       - webhooks
       summary: List webhook endpoints
-      operationId: list_endpoints_v1_webhook_endpoints_get
+      operationId: list_endpoints
       security:
       - ApiKey: []
       parameters:
@@ -4029,7 +4029,7 @@ paths:
         , \"subject_id\", \"data\"}`\n\nFailed deliveries are retried for about a\
         \ day. Messages may arrive out of order; use\n`id` to skip duplicates and\
         \ `timestamp` to order them."
-      operationId: create_endpoint_v1_webhook_endpoints_post
+      operationId: create_endpoint
       security:
       - ApiKey: []
       parameters:
@@ -4105,7 +4105,7 @@ paths:
       tags:
       - webhooks
       summary: Get a webhook endpoint
-      operationId: get_endpoint_v1_webhook_endpoints__endpoint_id__get
+      operationId: get_endpoint
       security:
       - ApiKey: []
       parameters:
@@ -4154,7 +4154,7 @@ paths:
       tags:
       - webhooks
       summary: Update a webhook endpoint
-      operationId: update_endpoint_v1_webhook_endpoints__endpoint_id__patch
+      operationId: update_endpoint
       security:
       - ApiKey: []
       parameters:
@@ -4218,7 +4218,7 @@ paths:
       summary: Delete a webhook endpoint
       description: 'Also deletes its delivery log. To stop deliveries for a while,
         set `enabled: false`.'
-      operationId: delete_endpoint_v1_webhook_endpoints__endpoint_id__delete
+      operationId: delete_endpoint
       security:
       - ApiKey: []
       parameters:
@@ -4272,7 +4272,7 @@ paths:
       - webhooks
       summary: Show the signing secret
       description: Needs write access.
-      operationId: get_secret_v1_webhook_endpoints__endpoint_id__secret_get
+      operationId: get_secret
       security:
       - ApiKey: []
       parameters:
@@ -4333,7 +4333,7 @@ paths:
         the new and the
 
         previous secret, so the receiver can switch over without missing any.'
-      operationId: rotate_secret_v1_webhook_endpoints__endpoint_id__rotate_secret_post
+      operationId: rotate_secret
       security:
       - ApiKey: []
       parameters:
@@ -4394,7 +4394,7 @@ paths:
         sends it within about a
 
         second. Check the result with `GET /v1/webhook-deliveries/{id}`.'
-      operationId: send_test_v1_webhook_endpoints__endpoint_id__test_post
+      operationId: send_test
       security:
       - ApiKey: []
       parameters:
@@ -4451,7 +4451,7 @@ paths:
       tags:
       - webhooks
       summary: List webhook deliveries
-      operationId: list_deliveries_v1_webhook_deliveries_get
+      operationId: list_deliveries
       security:
       - ApiKey: []
       parameters:
@@ -4550,7 +4550,7 @@ paths:
       tags:
       - webhooks
       summary: Get a delivery and its attempts
-      operationId: get_delivery_v1_webhook_deliveries__delivery_id__get
+      operationId: get_delivery
       security:
       - ApiKey: []
       parameters:
@@ -4604,7 +4604,7 @@ paths:
         so receivers that
 
         skip duplicates will skip it). The original''s log is kept.'
-      operationId: redeliver_v1_webhook_deliveries__delivery_id__redeliver_post
+      operationId: redeliver
       security:
       - ApiKey: []
       parameters:
@@ -4663,7 +4663,7 @@ paths:
       summary: List events
       description: Every change recorded by DCP, oldest first. Project keys see their
         project's events.
-      operationId: list_events_v1_events_get
+      operationId: list_events
       security:
       - ApiKey: []
       parameters:
@@ -4758,7 +4758,7 @@ paths:
       tags:
       - events
       summary: Get an event
-      operationId: get_event_v1_events__event_id__get
+      operationId: get_event
       security:
       - ApiKey: []
       parameters:
@@ -4808,7 +4808,7 @@ paths:
       tags:
       - datasets
       summary: List datasets
-      operationId: list_datasets_v1_datasets_get
+      operationId: list_datasets
       security:
       - ApiKey: []
       parameters:
@@ -4896,7 +4896,7 @@ paths:
         Its content lives in
 
         frozen, numbered versions.'
-      operationId: create_dataset_v1_datasets_post
+      operationId: create_dataset
       security:
       - ApiKey: []
       parameters:
@@ -4972,7 +4972,7 @@ paths:
       tags:
       - datasets
       summary: Get a dataset
-      operationId: get_dataset_v1_datasets__dataset_id__get
+      operationId: get_dataset
       security:
       - ApiKey: []
       parameters:
@@ -5021,7 +5021,7 @@ paths:
       tags:
       - datasets
       summary: Rename or re-describe a dataset
-      operationId: update_dataset_v1_datasets__dataset_id__patch
+      operationId: update_dataset
       security:
       - ApiKey: []
       parameters:
@@ -5083,7 +5083,7 @@ paths:
       tags:
       - datasets
       summary: Delete an empty dataset
-      operationId: delete_dataset_v1_datasets__dataset_id__delete
+      operationId: delete_dataset
       security:
       - ApiKey: []
       parameters:
@@ -5146,7 +5146,7 @@ paths:
         batches
 
         cost: the spend behind this version''s eval change.'
-      operationId: create_version_v1_datasets__dataset_id__versions_post
+      operationId: create_dataset_version
       security:
       - ApiKey: []
       parameters:
@@ -5228,7 +5228,7 @@ paths:
       tags:
       - datasets
       summary: List dataset versions
-      operationId: list_versions_v1_dataset_versions_get
+      operationId: list_dataset_versions
       security:
       - ApiKey: []
       parameters:
@@ -5313,7 +5313,7 @@ paths:
       tags:
       - datasets
       summary: Get a dataset version
-      operationId: get_version_v1_dataset_versions__version_id__get
+      operationId: get_dataset_version
       security:
       - ApiKey: []
       parameters:
@@ -5364,7 +5364,7 @@ paths:
       summary: Delete a dataset version
       description: Only versions with no eval results that no other version uses as
         a baseline.
-      operationId: delete_version_v1_dataset_versions__version_id__delete
+      operationId: delete_dataset_version
       security:
       - ApiKey: []
       parameters:
@@ -5421,7 +5421,7 @@ paths:
         spec version it came
 
         from. What a training pipeline downloads.'
-      operationId: get_manifest_v1_dataset_versions__version_id__manifest_get
+      operationId: get_manifest
       security:
       - ApiKey: []
       parameters:
@@ -5471,7 +5471,7 @@ paths:
       tags:
       - eval results
       summary: List eval results
-      operationId: list_evals_v1_eval_results_get
+      operationId: list_evals
       security:
       - ApiKey: []
       parameters:
@@ -5580,7 +5580,7 @@ paths:
 
         the capability''s main metric. Record several metrics (e.g. slices) as separate
         results.'
-      operationId: record_eval_v1_eval_results_post
+      operationId: record_eval
       security:
       - ApiKey: []
       parameters:
@@ -5656,7 +5656,7 @@ paths:
       tags:
       - eval results
       summary: Get an eval result
-      operationId: get_eval_v1_eval_results__eval_id__get
+      operationId: get_eval
       security:
       - ApiKey: []
       parameters:
@@ -5705,7 +5705,7 @@ paths:
       tags:
       - eval results
       summary: Delete an eval result
-      operationId: delete_eval_v1_eval_results__eval_id__delete
+      operationId: delete_eval
       security:
       - ApiKey: []
       parameters:
@@ -5779,7 +5779,7 @@ paths:
         it''s based
 
         on, and `notes` explains anything missing.'
-      operationId: get_portfolio_v1_reports_portfolio_get
+      operationId: get_portfolio
       security:
       - ApiKey: []
       parameters:
@@ -5859,7 +5859,7 @@ paths:
         problems, and the
 
         measured metrics that acceptance rules use.'
-      operationId: get_run_v1_quality_runs__run_id__get
+      operationId: get_run
       security:
       - ApiKey: []
       parameters:
@@ -5909,7 +5909,7 @@ paths:
       tags:
       - intake
       summary: List inbound webhooks
-      operationId: list_inbound_v1_inbound_webhooks_get
+      operationId: list_inbound
       security:
       - ApiKey: []
       parameters:
@@ -6003,7 +6003,7 @@ paths:
         its outbound
 
         webhooks. See `POST /v1/inbound/{id}` for the message format.'
-      operationId: create_inbound_v1_inbound_webhooks_post
+      operationId: create_inbound
       security:
       - ApiKey: []
       parameters:
@@ -6079,7 +6079,7 @@ paths:
       tags:
       - intake
       summary: Get an inbound webhook
-      operationId: get_inbound_v1_inbound_webhooks__endpoint_id__get
+      operationId: get_inbound
       security:
       - ApiKey: []
       parameters:
@@ -6128,7 +6128,7 @@ paths:
       tags:
       - intake
       summary: Update an inbound webhook
-      operationId: update_inbound_v1_inbound_webhooks__endpoint_id__patch
+      operationId: update_inbound
       security:
       - ApiKey: []
       parameters:
@@ -6191,7 +6191,7 @@ paths:
       - intake
       summary: Delete an inbound webhook
       description: Batches it created stay; its message log goes.
-      operationId: delete_inbound_v1_inbound_webhooks__endpoint_id__delete
+      operationId: delete_inbound
       security:
       - ApiKey: []
       parameters:
@@ -6245,7 +6245,7 @@ paths:
       - intake
       summary: Show the signing secret
       description: Needs write access.
-      operationId: get_inbound_secret_v1_inbound_webhooks__endpoint_id__secret_get
+      operationId: get_inbound_secret
       security:
       - ApiKey: []
       parameters:
@@ -6306,7 +6306,7 @@ paths:
         still accepted for 24
 
         hours, so the sender can switch over.'
-      operationId: rotate_inbound_secret_v1_inbound_webhooks__endpoint_id__rotate_secret_post
+      operationId: rotate_inbound_secret
       security:
       - ApiKey: []
       parameters:
@@ -6364,7 +6364,7 @@ paths:
       - intake
       summary: Messages received
       description: Every message, processed or rejected, with the reason it was rejected.
-      operationId: list_inbound_messages_v1_inbound_webhooks__endpoint_id__messages_get
+      operationId: list_inbound_messages
       security:
       - ApiKey: []
       parameters:
@@ -6455,7 +6455,7 @@ paths:
 
         (`duplicate: true`); a new message with the same `external_ref` updates the
         batch.'
-      operationId: receive_v1_inbound__endpoint_id__post
+      operationId: receive
       parameters:
       - name: endpoint_id
         in: path
@@ -6510,7 +6510,7 @@ paths:
       tags:
       - intake
       summary: List connectors
-      operationId: list_connectors_v1_connectors_get
+      operationId: list_connectors
       security:
       - ApiKey: []
       parameters:
@@ -6607,7 +6607,7 @@ paths:
         start with `.`
 
         or `_` are ignored. Credentials are stored encrypted and never shown again.'
-      operationId: create_connector_v1_connectors_post
+      operationId: create_connector
       security:
       - ApiKey: []
       parameters:
@@ -6683,7 +6683,7 @@ paths:
       tags:
       - intake
       summary: Get a connector
-      operationId: get_connector_v1_connectors__connector_id__get
+      operationId: get_connector
       security:
       - ApiKey: []
       parameters:
@@ -6732,7 +6732,7 @@ paths:
       tags:
       - intake
       summary: Update a connector
-      operationId: update_connector_v1_connectors__connector_id__patch
+      operationId: update_connector
       security:
       - ApiKey: []
       parameters:
@@ -6795,7 +6795,7 @@ paths:
       - intake
       summary: Delete a connector
       description: Batches it created stay.
-      operationId: delete_connector_v1_connectors__connector_id__delete
+      operationId: delete_connector
       security:
       - ApiKey: []
       parameters:
@@ -6850,7 +6850,7 @@ paths:
       summary: Check the bucket now
       description: Lists the bucket right away instead of waiting for the next scheduled
         check.
-      operationId: poll_now_v1_connectors__connector_id__poll_post
+      operationId: poll_now
       security:
       - ApiKey: []
       parameters:
@@ -6907,7 +6907,7 @@ paths:
       tags:
       - intake
       summary: Files the connector has seen
-      operationId: list_objects_v1_connectors__connector_id__objects_get
+      operationId: list_objects
       security:
       - ApiKey: []
       parameters:
@@ -6989,7 +6989,7 @@ paths:
 
         `allocation` ready for `POST /v1/allocations`. Nothing is created until you
         do that.'
-      operationId: allocation_plan_v1_requests__request_id__allocation_plan_get
+      operationId: allocation_plan
       security:
       - ApiKey: []
       parameters:
@@ -7052,7 +7052,7 @@ paths:
         yet, so without a
 
         data-mix problem it recommends investigating rather than cutting spend.'
-      operationId: diagnosis_v1_capabilities__capability_id__diagnosis_get
+      operationId: diagnosis
       security:
       - ApiKey: []
       parameters:
@@ -7110,7 +7110,7 @@ paths:
 
         if the diagnosis doesn''t recommend refining the spec, or the spec already
         has a draft.'
-      operationId: draft_spec_v1_capabilities__capability_id__diagnosis_draft_spec_post
+      operationId: draft_spec
       security:
       - ApiKey: []
       parameters:

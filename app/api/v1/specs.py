@@ -83,7 +83,7 @@ def delete_spec(spec_id: str, session: SessionDep, principal: PrincipalDep) -> N
 
 
 @router.get("/{spec_id}/versions", summary="List a spec's versions", responses=READ_ERRORS)
-def list_versions(
+def list_spec_versions(
     spec_id: str,
     session: SessionDep,
     principal: PrincipalDep,
@@ -101,7 +101,7 @@ def list_versions(
     summary="Start the next version (draft)",
     responses=WRITE_ERRORS,
 )
-def create_version(
+def create_spec_version(
     spec_id: str,
     body: SpecVersionUpdate,
     session: SessionDep,
@@ -121,7 +121,7 @@ def create_version(
 @router.get(
     "/{spec_id}/versions/{version}", summary="Get one version of a spec", responses=READ_ERRORS
 )
-def get_version(
+def get_spec_version(
     spec_id: str, version: VersionNumber, session: SessionDep, principal: PrincipalDep
 ) -> SpecVersion:
     return SpecVersion.model_validate(specs.get_version(session, principal, spec_id, version))
@@ -130,7 +130,7 @@ def get_version(
 @router.patch(
     "/{spec_id}/versions/{version}", summary="Edit a draft version", responses=WRITE_ERRORS
 )
-def update_version(
+def update_spec_version(
     spec_id: str,
     version: VersionNumber,
     body: SpecVersionUpdate,
@@ -151,7 +151,7 @@ def update_version(
     summary="Approve a draft (freezes it)",
     responses=WRITE_ERRORS,
 )
-def approve_version(
+def approve_spec_version(
     spec_id: str,
     version: VersionNumber,
     body: SpecVersionApprove,
@@ -173,7 +173,7 @@ def approve_version(
     summary="Discard a draft version",
     responses=WRITE_ERRORS,
 )
-def delete_version(
+def delete_spec_version(
     spec_id: str, version: VersionNumber, session: SessionDep, principal: PrincipalDep
 ) -> None:
     """Drafts only. Approved versions can never be deleted."""
