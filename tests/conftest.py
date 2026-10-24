@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL", "postgresql+psycopg://dcp:dcp-test@127.0.0.1:55432/dcp_test"
 )
+os.environ.setdefault("DCP_SECRET_KEY", "test-only-secret-key-not-for-real-use-0123456789")
 
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402

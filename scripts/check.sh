@@ -3,6 +3,8 @@
 #   1. style (ruff)   2. types (mypy)   3. OpenAPI spec is up to date   4. tests (pytest)
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# Test-only master key, so checks never depend on your personal .env.
+export DCP_SECRET_KEY="${DCP_SECRET_KEY:-test-only-secret-key-not-for-real-use-0123456789}"
 
 step() { printf '\n\033[1m==> %s\033[0m\n' "$1"; }
 

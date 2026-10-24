@@ -12,6 +12,7 @@ from app.api.v1 import (
     projects,
     requests,
     specs,
+    webhooks,
 )
 
 router = APIRouter(prefix="/v1")
@@ -24,3 +25,6 @@ router.include_router(specs.router)
 router.include_router(requests.router)
 router.include_router(allocations.router)
 router.include_router(batches.router)
+router.include_router(webhooks.endpoints)
+router.include_router(webhooks.deliveries)
+router.include_router(webhooks.events)

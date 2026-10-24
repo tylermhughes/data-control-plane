@@ -8,9 +8,12 @@ for what it does and [`docs/PLAN.md`](docs/PLAN.md) for the build plan.
 You need Docker. Then:
 
 ```
-cp .env.example .env        # then open .env and set POSTGRES_PASSWORD
+cp .env.example .env        # then open .env and set POSTGRES_PASSWORD and DCP_SECRET_KEY
 docker compose up --build
 ```
+
+Generate a `DCP_SECRET_KEY` with `python3 -c "import secrets; print(secrets.token_urlsafe(48))"`.
+Keep it stable and back it up: webhook signing secrets are derived from it.
 
 The first time, create an admin API key (it is shown only once, so copy it):
 
@@ -33,6 +36,17 @@ To stop it, press `Ctrl+C`, or run `docker compose down`. Your data is kept for 
    `curl -LsSf https://astral.sh/uv/install.sh | sh`, then open a new Terminal window and run
    `uv python install 3.12`.
 3. **Project libraries:** in this folder, run `uv sync`.
+
+## Try webhooks locally
+
+`scripts/webhook_receiver.py` prints every webhook it receives and checks its signature:
+
+```
+python3 scripts/webhook_receiver.py --secret whsec_...      # add --fail to test retries
+```
+
+Register `http://host.docker.internal:9000/` as the endpoint URL. That's how DCP, running in Docker,
+reaches your machine. If macOS asks whether Python may accept incoming connections, click **Allow**.
 
 ## Check everything
 

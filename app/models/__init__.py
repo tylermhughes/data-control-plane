@@ -10,6 +10,7 @@ from app.models.idempotency import IdempotencyRecord
 from app.models.project import Project
 from app.models.request import Allocation, Request
 from app.models.spec import Spec, SpecVersion
+from app.models.webhook import WebhookDelivery, WebhookEndpoint
 
 __all__ = [
     "Allocation",
@@ -24,4 +25,6 @@ __all__ = [
     "Request",
     "Spec",
     "SpecVersion",
+    "WebhookDelivery",
+    "WebhookEndpoint",
 ]
