@@ -32,6 +32,9 @@ Schemathesis, oasdiff, Docker Compose.
 - `app/models/`: tables. `app/services/`: all business rules.
 - `app/worker/`: jobs, checks, webhook sender. `app/connectors/`: one module per connector.
 - `migrations/`, `openapi.yaml` (committed), `tests/` (mirrors `app/`, plus `tests/e2e/`).
+- `web/`: the web interface (React + TypeScript). It uses only the public API; types come from
+  openapi.yaml (`./scripts/web.sh run api-types`). Run npm via `./scripts/web.sh` (Docker).
+  Component tests in `web/src/**/*.test.tsx`, browser tests in `web/e2e/`.
 
 ## Commands
 - Start: `docker compose up --build` (add `--profile dev` for the local S3 server)

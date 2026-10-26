@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     dcp_local_data_dir: str = "/data"
     dcp_s3_endpoint_url: str | None = None
     dcp_check_max_records: int = 5_000_000
+    # The built web interface; served at / when present (it is, in the Docker image).
+    dcp_web_dir: str = "/srv/web"
 
     @field_validator("dcp_secret_key")
     @classmethod

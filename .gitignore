@@ -20,3 +20,9 @@ data/*
 
 # Database backups made by scripts/backup.sh
 backups/
+
+# Web interface: installed packages and build output
+web/node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/

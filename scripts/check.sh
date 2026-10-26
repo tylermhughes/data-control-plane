@@ -2,7 +2,8 @@
 # Runs every check. If this passes, the work is done:
 #   1. style (ruff)   2. types (mypy)   3. OpenAPI spec is up to date
 #   4. no breaking API changes vs main (oasdiff)   5. Python client is up to date, CLI loads
-#   6. tests (pytest, including API fuzz tests with Schemathesis)
+#   6. web interface: API types up to date, type check, component tests, build
+#   7. tests (pytest: API fuzz tests with Schemathesis, browser tests with Playwright)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 # Test-only master key, so checks never depend on your personal .env.
@@ -53,7 +54,23 @@ fi
 rm -rf "$tmp"
 (cd clients/cli && uv run --quiet dcp list >/dev/null)
 
-step "Tests (pytest, using a throwaway database)"
+step "Web interface: API types, type check, component tests (Vitest), build"
+[ -d web/node_modules ] || ./scripts/web.sh ci
+tmp="$(mktemp -d)"
+cp web/src/api/schema.d.ts "$tmp/schema.d.ts"
+./scripts/web.sh run --silent api-types >/dev/null
+if ! diff -q "$tmp/schema.d.ts" web/src/api/schema.d.ts >/dev/null; then
+  echo "web/src/api/schema.d.ts was out of date with openapi.yaml; it has been regenerated."
+  echo "Review the change and commit it."
+  rm -rf "$tmp"
+  exit 1
+fi
+rm -rf "$tmp"
+./scripts/web.sh run --silent typecheck
+./scripts/web.sh run --silent test
+./scripts/web.sh run --silent build >/dev/null
+
+step "Tests (pytest, using a throwaway database; includes browser tests)"
 # Compose needs POSTGRES_PASSWORD to read the file, even though db-test doesn't use it.
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-not-used-by-tests}" \
   docker compose --profile test up -d --wait db-test s3-test

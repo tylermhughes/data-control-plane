@@ -21,7 +21,11 @@ The first time, create an admin API key (it is shown only once, so copy it):
 docker compose exec api python -m app.cli create-admin-key
 ```
 
-Open **http://localhost:8000/docs** to see and try the API. Click **Authorize** and paste the key.
+Open **http://localhost:8000/** for the web interface (sign in with the key), or
+**http://localhost:8000/docs** to see and try the API (click **Authorize** and paste the key).
+For a guided tour of everything DCP does, load the demo data
+(`DCP_API_KEY=<key> python3 scripts/demo.py --diagnosis`), then click **Tutorial** in the top bar.
+
 `http://localhost:8000/healthz` says whether the server is running, and `/readyz` says whether it can reach the database.
 
 To stop it, press `Ctrl+C`, or run `docker compose down`. Your data is kept for next time.

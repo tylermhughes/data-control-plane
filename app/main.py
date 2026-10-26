@@ -10,7 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app import log_filters
-from app.api import health, problems, v1
+from app.api import health, problems, v1, web
 from app.config import get_settings
 from app.db import get_engine
 from app.services import api_keys
@@ -40,20 +40,28 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-app = FastAPI(
-    title="Data Control Plane API",
-    version="0.9.0",
-    description=(
-        "The control plane for AI training data: plan, route, check and measure data "
-        "from every source. Everything the product does is available through this API.\n\n"
-        "**Authentication:** send your API key as `Authorization: Bearer dcp_...` "
-        "(in these docs, use the **Authorize** button). "
-        "**Errors** use the RFC 9457 problem format. "
-        "**Retries:** POST requests accept an `Idempotency-Key` header."
-    ),
-    lifespan=lifespan,
-    generate_unique_id_function=operation_id,
-)
-problems.install(app)
-app.include_router(health.router)
-app.include_router(v1.router)
+def create_app(web_dir: str | None = None) -> FastAPI:
+    """The whole application. `web_dir` overrides where the built web interface is."""
+    application = FastAPI(
+        title="Data Control Plane API",
+        version="0.9.0",
+        description=(
+            "The control plane for AI training data: plan, route, check and measure data "
+            "from every source. Everything the product does is available through this API.\n\n"
+            "**Authentication:** send your API key as `Authorization: Bearer dcp_...` "
+            "(in these docs, use the **Authorize** button). "
+            "**Errors** use the RFC 9457 problem format. "
+            "**Retries:** POST requests accept an `Idempotency-Key` header."
+        ),
+        lifespan=lifespan,
+        generate_unique_id_function=operation_id,
+    )
+    problems.install(application)
+    application.include_router(health.router)
+    application.include_router(v1.router)
+    # Last: the UI takes every path the API doesn't.
+    web.install(application, web_dir or get_settings().dcp_web_dir)
+    return application
+
+
+app = create_app()
