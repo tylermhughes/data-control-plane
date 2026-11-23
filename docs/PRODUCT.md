@@ -1,11 +1,5 @@
 # Data Control Plane — Product Brief
 
-Read this before planning or building anything. It explains what the product is for.
-The clickable prototype in `docs/prototype/data-control-plane.html` shows the intended
-experience; open it in a browser. All names and numbers in it are sample data.
-
-## One sentence
-
 A vendor-neutral control plane for AI training data: it decides what data to get and
 from where, checks it, gates what reaches training, and shows leaders which data spend
 actually improved their models.
@@ -14,7 +8,7 @@ actually improved their models.
 
 ## Where it fits ("planes")
 
-- **Data collection plane:** Mercor, Surge, Micro1, Scale, labeling tools, synthetic
+- **Data collection plane:** Mercor, Surge, Micro1, Scale, Toloka, etc, labeling tools, synthetic
   pipelines, RL environment vendors, internal systems.
 - **Storage plane:** S3, GCS, Databricks, Snowflake.
 - **Compute plane:** GPUs and training frameworks.
